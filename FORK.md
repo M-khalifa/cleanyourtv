@@ -32,3 +32,11 @@ standby and put it back afterwards. No Azan recording is included; you choose yo
 ## Weather add-on
 
 `NowProvider`, the current conditions the Home card reads.
+
+## Review
+
+The Prayer Times add-on, the Home card and the merge with upstream were checked before release with
+[cross-review](https://github.com/M-khalifa/SkillArray/tree/main/plugins/cross-review/skills/cross-review), part of
+[SkillArray](https://github.com/M-khalifa/SkillArray): Claude and Codex review the same code and cross-examine each
+other's findings. Three runs gave 33 findings: 31 confirmed and fixed, 1 refuted, and 1 left open at low stakes
+(whether the exact prayer times could hint at the city).
