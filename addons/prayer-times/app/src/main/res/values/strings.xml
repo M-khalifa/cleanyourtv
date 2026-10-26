@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sleep_service_label">Prayer Times standby</string>
+    <string name="sleep_service_description">Only puts the TV back to standby after a morning recitation or Azan that turned it on. Does not read the screen.</string>
+</resources>

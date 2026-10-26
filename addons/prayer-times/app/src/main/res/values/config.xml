@@ -1,11 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The city shown. Coordinates in decimal degrees. -->
-    <string name="latitude" translatable="false">33.5731</string>
-    <string name="longitude" translatable="false">-7.5898</string>
-    <string name="place" translatable="false">Casablanca</string>
+    <!-- Defaults only, all changeable in Settings on the TV. Keep the location empty and reminders false in a
+         shared build: they are opt-in. Location in decimal degrees. -->
+    <string name="latitude" translatable="false"></string>
+    <string name="longitude" translatable="false"></string>
+    <string name="place" translatable="false"></string>
     <!-- Aladhan's calculation method (https://aladhan.com/calculation-methods), e.g. 2 ISNA, 3 Muslim World
          League, 4 Umm al-Qura, 5 Egyptian, 13 Turkey, 21 Morocco. -->
     <string name="method" translatable="false">21</string>
     <color name="accent">#2BB673</color>
+    <!-- A silent banner over whatever is playing, alert_lead_minutes before each prayer and at it (PrayerAlerts).
+         Days Aladhan has not answered for are worked out on the TV with the method's angles. -->
+    <bool name="alerts">false</bool>
+    <integer name="alert_lead_minutes">15</integer>
+    <!-- Minutes before each prayer the countdown pill appears over other apps; 0 turns it off. At or under
+         alert_lead_minutes it starts with the lead banner and is red throughout. -->
+    <integer name="alert_soon_minutes">15</integer>
+    <!-- At the prayer time: pause what is playing, play the chosen Azan sound to the end with a Dismiss window (true),
+         or only the silent banner (false). No sound chosen means no Azan. -->
+    <bool name="azan_at_prayer">false</bool>
+    <!-- Address the Settings download box starts with; empty by default, the add-on ships no recording. -->
+    <string name="azan_url" translatable="false"></string>
+    <!-- TV on: Fajr plays at azan_volume_fajr, others at the current volume. In standby the TV wakes at these
+         volumes and goes back to standby after the Azan unless a key was pressed. Scale is 0..100 on TCL. -->
+    <bool name="azan_wake_tv">false</bool>
+    <integer name="azan_volume">5</integer>
+    <integer name="azan_volume_fajr">2</integer>
+    <!-- Minutes before an Azan or the recitation a TV in standby is woken on a dark clock, so the event starts on
+         time: on this TCL an alarm can start up to three minutes late while the screen is off. 0 turns it off. -->
+    <integer name="prewake_minutes">4</integer>
+    <!-- Daily recitation: at morning_quran_time (24 h, the TV's time zone) the TV wakes, the media volume is set to
+         morning_quran_volume (0 to the TV's maximum, 100 on this TCL) and morning_quran_url plays to the end. -->
+    <bool name="morning_quran">false</bool>
+    <string name="morning_quran_time" translatable="false">06:00</string>
+    <integer name="morning_quran_volume">2</integer>
+    <string name="morning_quran_url" translatable="false">https://server8.mp3quran.net/afs/002.mp3</string>
+    <string name="morning_quran_title" translatable="false">سورة البقرة · Surat Al-Baqarah</string>
+    <string name="morning_quran_reciter" translatable="false">مشاري راشد العفاسي · Mishary Alafasy</string>
+    <!-- Fridays: Al-Kahf kahf_minutes_before_dhuhr before the Dhuhr Azan, at kahf_volume, waking the TV like the
+         morning recitation and putting it back to standby at the end. -->
+    <bool name="kahf_friday">false</bool>
+    <integer name="kahf_minutes_before_dhuhr">120</integer>
+    <integer name="kahf_volume">5</integer>
+    <string name="kahf_url" translatable="false">https://server8.mp3quran.net/afs/018.mp3</string>
+    <string name="kahf_title" translatable="false">سورة الكهف · Surat Al-Kahf</string>
+    <!-- Days added to Java's Umm al-Qura Hijri date where the local mosque starts a month earlier (-1) or later
+         (1). In Ramadan the banners read "Suhoor ends" and "Iftar", and the Maghrib Azan window "Iftar". -->
+    <integer name="hijri_offset_days">0</integer>
+    <!-- Asr: 0 standard (Shafi, Maliki, Hanbali), 1 Hanafi. Aladhan's school parameter. -->
+    <integer name="school">0</integer>
+    <!-- In Ramadan the banners, the Home card and the Maghrib Azan window read Suhoor ends / Iftar. -->
+    <bool name="ramadan_wording">true</bool>
+    <!-- The Hijri date next to the countdown on the Clean Your TV Home card (read from this add-on's provider). -->
+    <bool name="card_hijri">true</bool>
+
 </resources>

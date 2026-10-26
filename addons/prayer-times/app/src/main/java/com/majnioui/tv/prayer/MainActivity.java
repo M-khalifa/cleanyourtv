@@ -28,9 +28,9 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * Today's prayer times for one city from Aladhan (free, no account or key; only the coordinates and
- * the date are sent), with the calculation method in res/values/config.xml. The next prayer is highlighted
- * with a countdown.
+ * Today's prayer times for one city from Aladhan (free, no account or key; only the coordinates, the date, the
+ * method and the Asr school are sent), with the city and method chosen in Settings (OptionsActivity). The next
+ * prayer is highlighted with a countdown.
  */
 public class MainActivity extends Activity {
     private static final String TAG = "PrayerTimes";
@@ -43,7 +43,7 @@ public class MainActivity extends Activity {
     private final Handler main = new Handler(Looper.getMainLooper());
     private Typeface font;
     private int accent;
-    private TextView dates, next, status;
+    private TextView dates, next, status, place;
     private LinearLayout rows;
     /** Today's times as minutes after midnight, in NAMES order; null until loaded. */
     private int[] minutes;
@@ -52,11 +52,14 @@ public class MainActivity extends Activity {
     private String methodName = "";
     /** The day the times are for (yyyy-MM-dd), to reload after midnight. */
     private String loadedFor;
+    /** The location and method the shown times are for; another one clears them first. */
+    private String shownFingerprint;
     private boolean loading;
 
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
+            // A failed fetch leaves loadedFor unset, so the next minute tries again.
             if (!today().equals(loadedFor)) load();
             else render();
             main.postDelayed(this, MINUTE_MS);
@@ -66,6 +69,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        // Off the main thread; adb test alarms are in TestHooksActivity.
+        PrayerAlerts.rearm(this);
         font = getResources().getFont(R.font.outfit);
         accent = getColor(R.color.accent);
 
@@ -78,9 +83,8 @@ public class MainActivity extends Activity {
         col.setPadding(dp(80), dp(48), dp(80), dp(40));
         root.addView(col, new FrameLayout.LayoutParams(-1, -1));
 
-        TextView place = text(18, 400, 0xB3FFFFFF);
+        place = text(18, 400, 0xB3FFFFFF);
         place.setLetterSpacing(0.25f);
-        place.setText(getString(R.string.place).toUpperCase(Locale.ROOT));
         col.addView(place);
 
         next = text(52, 300, 0xFFFFFFFF);
@@ -95,10 +99,31 @@ public class MainActivity extends Activity {
         rlp.setMargins(0, dp(36), 0, 0);
         col.addView(rows, rlp);
 
+        LinearLayout foot = new LinearLayout(this);
+        foot.setOrientation(LinearLayout.HORIZONTAL);
+        foot.setGravity(Gravity.CENTER_VERTICAL);
+        foot.setPadding(0, dp(18), 0, 0);
         status = text(16, 400, 0x80FFFFFF);
-        status.setPadding(0, dp(18), 0, 0);
         status.setText("Loading…");
-        col.addView(status);
+        foot.addView(status, new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView settings = text(18, 500, 0xFFFFFFFF);
+        settings.setText("Settings");
+        settings.setPadding(dp(26), dp(10), dp(26), dp(10));
+        settings.setFocusable(true);
+        settings.setClickable(true);
+        android.graphics.drawable.StateListDrawable sbg = new android.graphics.drawable.StateListDrawable();
+        GradientDrawable on = new GradientDrawable();
+        on.setCornerRadius(dp(22));
+        on.setColor(accent);
+        GradientDrawable off = new GradientDrawable();
+        off.setCornerRadius(dp(22));
+        off.setColor(0x26FFFFFF);
+        sbg.addState(new int[]{android.R.attr.state_focused}, on);
+        sbg.addState(new int[]{}, off);
+        settings.setBackground(sbg);
+        settings.setOnClickListener(v -> startActivity(new android.content.Intent(this, OptionsActivity.class)));
+        foot.addView(settings);
+        col.addView(foot);
 
         setContentView(root);
     }
@@ -122,12 +147,28 @@ public class MainActivity extends Activity {
 
     private void load() {
         if (loading) return;
+        Options o = Options.load(this);
+        if (!o.hasLocation()) {
+            place.setText("NO CITY YET");
+            next.setText("Choose your city");
+            dates.setText("");
+            rows.removeAllViews();
+            minutes = null;
+            status.setText("Open Settings to choose the city and the calculation method.");
+            return;
+        }
+        place.setText(o.place.toUpperCase(Locale.ROOT));
+        final String fp = o.fingerprint();
+        if (!fp.equals(shownFingerprint)) {
+            // Another city or method: the TV's own calculation at once, Aladhan's when it answers.
+            showCalculated(o);
+            shownFingerprint = fp;
+            loadedFor = null;
+        }
         loading = true;
         final String day = today();
-        String url = "https://api.aladhan.com/v1/timings/"
-                + new SimpleDateFormat("dd-MM-yyyy", Locale.ROOT).format(new Date())
-                + "?latitude=" + getString(R.string.latitude) + "&longitude=" + getString(R.string.longitude)
-                + "&method=" + getString(R.string.method);
+        final java.time.LocalDate date = java.time.LocalDate.now();
+        String url = DailyTimes.url(o, date);
         new Thread(() -> {
             JSONObject json = null;
             try {
@@ -142,8 +183,13 @@ public class MainActivity extends Activity {
                     status.setText("Can't reach Aladhan. Showing the last times, if any.");
                     return;
                 }
+                if (!fp.equals(Options.load(this).fingerprint())) {
+                    // The city or method changed while this was on its way: fetch for the new one.
+                    load();
+                    return;
+                }
                 try {
-                    parse(result.getJSONObject("data"));
+                    parse(result.getJSONObject("data"), fp, date);
                     loadedFor = day;
                     render();
                 } catch (Exception e) {
@@ -154,7 +200,7 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    private void parse(JSONObject data) throws Exception {
+    private void parse(JSONObject data, String fingerprint, java.time.LocalDate date) throws Exception {
         JSONObject t = data.getJSONObject("timings");
         int[] m = new int[NAMES.length];
         String[] s = new String[NAMES.length];
@@ -167,14 +213,28 @@ public class MainActivity extends Activity {
         }
         minutes = m;
         times = s;
+        DailyTimes.save(this, date, fingerprint, m);
         JSONObject meta = data.optJSONObject("meta");
         JSONObject method = meta != null ? meta.optJSONObject("method") : null;
         methodName = method != null ? method.optString("name", "") : "";
-        JSONObject date = data.getJSONObject("date");
-        JSONObject hijri = date.getJSONObject("hijri");
+        showDates();
+    }
+
+    /** Today's date and the Hijri date with the adjustment from Settings, the same as the Home card's. */
+    private void showDates() {
         dates.setText(new SimpleDateFormat("EEEE d MMMM", Locale.ENGLISH).format(new Date()) + "  ·  "
-                + hijri.getString("day") + " " + hijri.getJSONObject("month").getString("en") + " "
-                + hijri.getString("year") + " AH");
+                + Hijri.text(java.time.LocalDate.now(), Options.load(this).hijriOffset) + " AH");
+    }
+
+    private void showCalculated(Options o) {
+        int[] m = PrayerAlerts.times(this, java.time.ZoneId.systemDefault()).apply(java.time.LocalDate.now());
+        String[] s = new String[m.length];
+        for (int i = 0; i < m.length; i++) s[i] = String.format(Locale.ROOT, "%02d:%02d", m[i] / 60, m[i] % 60);
+        minutes = m;
+        times = s;
+        methodName = Options.methodName(o.method) + " (calculated on the TV)";
+        showDates();
+        render();
     }
 
     private void render() {

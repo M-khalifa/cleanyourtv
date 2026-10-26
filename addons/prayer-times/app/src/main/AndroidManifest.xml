@@ -5,6 +5,16 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- Granted over adb only (README): lets the app switch its SleepService back on after a force-stop. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        xmlns:tools="http://schemas.android.com/tools" tools:ignore="ProtectedPermissions" />
 
     <application
         android:label="Prayer Times"
@@ -26,5 +36,116 @@
             </intent-filter>
             <meta-data android:name="com.gathin.tvhome.card" android:resource="@xml/module_card" />
         </activity>
+
+        <receiver android:name=".PrayerAlerts" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Settings on the TV: city, method, and each reminder switched on or off (OptionsActivity). -->
+        <activity
+            android:name=".OptionsActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+
+        <!-- The pill and banner alarms: private, so no other app can raise an alert or an Azan. -->
+        <receiver android:name=".AlertReceiver" android:exported="false" />
+
+        <!-- adb test alarms (TestHooksActivity): DUMP is held by adb's shell, never by an app. -->
+        <activity
+            android:name=".TestHooksActivity"
+            android:exported="true"
+            android:permission="android.permission.DUMP"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Today's and tomorrow's Aladhan times for the home screen; read-only, public data. -->
+        <provider
+            android:name=".TimesProvider"
+            android:authorities="com.majnioui.tv.prayer.times"
+            android:exported="true" />
+
+        <!-- The daily morning recitation (MorningQuran, QuranActivity). -->
+        <receiver android:name=".MorningQuran" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+        <activity
+            android:name=".QuranActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+
+        <!-- Dark clock a few minutes before an Azan or the recitation, waking a TV in standby (PreWakeActivity). -->
+        <activity
+            android:name=".PreWakeActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity="com.majnioui.tv.prayer.prewake"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+
+        <!-- Opened by the Azan alarm: wakes a TV in standby, starts AzanService and closes (AzanActivity). -->
+        <activity
+            android:name=".AzanActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity="com.majnioui.tv.prayer.azan"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
+
+        <!-- The Azan at the prayer time with its window over other apps (AzanService). -->
+        <service
+            android:name=".AzanService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <!-- Back to standby after a recitation or Azan that woke the TV (SleepService). Asks for no events and cannot
+             read the screen; switched on over adb (README). -->
+        <service
+            android:name=".SleepService"
+            android:exported="true"
+            android:label="@string/sleep_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/sleep_service" />
+        </service>
+
+        <!-- Re-arms the alarms after the firmware force-stops the app (RevivalService). Reads no notification;
+             approved over adb (README). -->
+        <service
+            android:name=".RevivalService"
+            android:exported="true"
+            android:label="Prayer Times alarms"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <!-- The countdown pill over other apps before a prayer (CountdownService). -->
+        <service
+            android:name=".CountdownService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="On-screen countdown to the next prayer time, drawn over other apps" />
+        </service>
     </application>
 </manifest>
