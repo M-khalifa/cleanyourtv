@@ -193,6 +193,45 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private List<RaceWeekend.Race> raceCalendar;
     private View racePanel;
     private TextView raceKicker, raceHeadline, raceSessions;
+    /** config.xml home_widgets: the next prayer and the weather now under the top buttons (HomeWidgets). */
+    private boolean homeWidgetsOn;
+    private View homeWidgets;
+    private TextView prayerKicker, prayerLine, prayerMeta, weatherKicker, weatherLine, weatherMeta;
+    private ImageView prayerIcon, weatherIcon;
+    private TextView prayerHeadline;
+    /** HomeWidgets.urgency of the next prayer as last applied; -1 before the first. */
+    private int prayerLevel = -1;
+    private int prayerSoonMinutes, prayerImminentMinutes;
+    /** The Prayer Times add-on's daily times by ISO date, read with the weather off the UI thread. */
+    /** The Prayer Times add-on's last answer; null while it is missing or has no city, so no prayer side. */
+    private volatile HomeWidgets.PrayerFeed prayerFeed;
+    private boolean hasPrayer;
+    /** The Prayer Times add-on shows its own red pill in the last minutes, so the headline steps aside then. */
+    private boolean pillCovers = true;
+    /** The card's visibility from the grid scroll, 1 at rest and 0 once scrolled away. */
+    private float widgetsShown = 1f;
+    private View prayerWidget, weatherWidget;
+    /** The card shows the weather page now; it turns every WIDGET_FLIP_MS while there is weather to show. */
+    private boolean showingWeather;
+    private boolean hasWeather;
+    private static final long WIDGET_FLIP_MS = 6_000L;
+    private final Runnable widgetFlip = new Runnable() {
+        @Override
+        public void run() {
+            if (hasPrayer && prayerLevel > 0) {
+                pinPrayerPage();
+            } else if (hasWeather && hasPrayer) {
+                showingWeather = !showingWeather;
+                long ms = reducedMotion ? 0 : 450;
+                prayerWidget.animate().alpha(showingWeather ? 0f : 1f).setDuration(ms).start();
+                weatherWidget.animate().alpha(showingWeather ? 1f : 0f).setDuration(ms).start();
+            }
+            handler.postDelayed(this, WIDGET_FLIP_MS);
+        }
+    };
+    /** The weather read is a call into the Weather add-on's process: kept off the UI thread. */
+    private final java.util.concurrent.ExecutorService widgetIo = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private TextView btnBluetooth;
     /** config.xml show_stats, overridable by a theme. Off: the line is gone and nothing is read. */
     private boolean showStats;
     private boolean shamsi;
@@ -372,6 +411,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         public void run() {
             updateGreeting();
             updateRace();
+            updateWidgets();
             // The pill follows the network callbacks and each return to Home; only the diya's flame follows the
             // signal level, so only it needs this minute's binder calls (about 7 ms on the UI thread).
             if (festive) updateWifiLabel();
@@ -494,6 +534,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         raceKicker = findViewById(R.id.raceKicker);
         raceHeadline = findViewById(R.id.raceHeadline);
         raceSessions = findViewById(R.id.raceSessions);
+        homeWidgetsOn = getResources().getBoolean(R.bool.home_widgets);
+        prayerSoonMinutes = getResources().getInteger(R.integer.prayer_soon_minutes);
+        prayerImminentMinutes = getResources().getInteger(R.integer.prayer_imminent_minutes);
+        homeWidgets = findViewById(R.id.homeWidgets);
+        prayerKicker = findViewById(R.id.prayerKicker);
+        prayerLine = findViewById(R.id.prayerLine);
+        prayerMeta = findViewById(R.id.prayerMeta);
+        weatherKicker = findViewById(R.id.weatherKicker);
+        weatherLine = findViewById(R.id.weatherLine);
+        weatherMeta = findViewById(R.id.weatherMeta);
+        prayerIcon = findViewById(R.id.prayerIcon);
+        prayerHeadline = findViewById(R.id.prayerHeadline);
+        weatherIcon = findViewById(R.id.weatherIcon);
+        prayerWidget = findViewById(R.id.prayerWidget);
+        weatherWidget = findViewById(R.id.weatherWidget);
         showStats = cfg.showStats;
         shamsi = cfg.shamsiDate;
         lunarDate = findViewById(R.id.lunarDate);
@@ -668,6 +723,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         });
 
+        // The home widget card scrolls away with the grid, like the dock, fading as it reaches the top bar.
+        grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
+                if (homeWidgets.getVisibility() != View.VISIBLE) return;
+                float offset = rv.computeVerticalScrollOffset();
+                homeWidgets.setTranslationY(-offset);
+                // A few pixels of settle after a rebuild do not count as scrolling away.
+                float past = Math.max(0f, offset - 12 * density);
+                widgetsShown = Math.max(0f, 1f - past / (50 * density));
+                homeWidgets.setAlpha(widgetsShown);
+                prayerHeadline.setAlpha(prayerLevel == 2 && pillCovers ? 0f : prayerLevel >= 1 ? 1f : 1f - widgetsShown);
+            }
+        });
+
         // Liquid feel: soft springs on the highlight's position.
         springX = new SpringAnimation(glass, new FloatPropertyCompat<View>("glassContentX") {
             @Override
@@ -720,6 +790,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnSettings.setOnClickListener(v -> {
             if (launcherSettingsButton) startActivityForResult(
                     new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST);
+            else if (!toolApps().isEmpty()) showToolsMenu();
             else open(systemIntent(Settings.ACTION_SETTINGS));
         });
         btnReorder = findViewById(R.id.btnReorder);
@@ -735,6 +806,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
         btnLibraryTop.setVisibility(cfg.libraryButton && cfg.appLibrary ? View.VISIBLE : View.GONE);
         addTopBarApps(cfg.topBarApps, cfg.launchActions);
+        btnBluetooth = findViewById(R.id.btnBluetooth);
+        if (getResources().getBoolean(R.bool.bluetooth_button) && !cfg.topMenu) {
+            btnBluetooth.setVisibility(View.VISIBLE);
+            btnBluetooth.setOnClickListener(v -> open(systemIntent(Settings.ACTION_BLUETOOTH_SETTINGS)));
+        }
         iconOnlyButtons = cfg.iconOnlyButtons;
         topMenu = cfg.topMenu;
         wifiIconOnly = iconOnlyButtons && cfg.wifiLabelWidth <= 0;
@@ -799,8 +875,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnReorder.setOnKeyListener(pillKeys);
         btnLibraryTop.setOnKeyListener(pillKeys);
         for (View button : topAppButtons) button.setOnKeyListener(pillKeys);
+        btnBluetooth.setOnKeyListener(pillKeys);
         if (advancedEffects) {
-            List<View> pills = new ArrayList<>(Arrays.asList(btnInputs, btnWifi, btnVpn, btnReorder, btnLibraryTop, btnSettings));
+            List<View> pills = new ArrayList<>(Arrays.asList(btnInputs, btnWifi, btnVpn, btnBluetooth, btnReorder, btnLibraryTop, btnSettings));
             pills.addAll(topAppButtons);
             for (View button : pills) {
                 button.setOnFocusChangeListener((view, focused) -> view.animate()
@@ -971,6 +1048,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (openLiveTvAfterBoot()) return;
         updateGreeting();
         updateRace();
+        updateWidgets();
         // The network and Inputs pills keep their state while Home is in the background, and callbacks update them
         // when the network or the inputs change, so this refresh only catches anything missed. Its binder calls
         // (about 7 ms on a TCL C755, most of it WifiManager.getConnectionInfo) would hold up the first frame back
@@ -986,6 +1064,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sky.update();
         wallpaperPlayer.start();
         handler.postDelayed(minuteTick, MINUTE_MS);
+        handler.removeCallbacks(widgetFlip);
+        if (homeWidgetsOn) handler.postDelayed(widgetFlip, WIDGET_FLIP_MS);
         if (festive && diya != null) {
             diya.start();
             LocalDate today = LocalDate.now();
@@ -1159,6 +1239,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambient.animate().cancel();
         heroArt.animate().cancel();
         handler.removeCallbacks(minuteTick);
+        handler.removeCallbacks(widgetFlip);
         stopStats();
         if (diya != null) diya.stop();
         cancelPendingFocusScroll();
@@ -2528,6 +2609,153 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private static final int RACE_RED = 0xFFFF3B2F;
 
+    /** The Bluetooth button's dimming and the home widgets, once a minute and on each return to Home. */
+    private void updateWidgets() {
+        if (btnBluetooth.getVisibility() == View.VISIBLE) {
+            android.bluetooth.BluetoothManager bm = getSystemService(android.bluetooth.BluetoothManager.class);
+            android.bluetooth.BluetoothAdapter bt = bm != null ? bm.getAdapter() : null;
+            btnBluetooth.setAlpha(bt != null && bt.isEnabled() ? 1f : 0.5f);
+        }
+        if (!homeWidgetsOn) return;
+        // The prayer side only with the Prayer Times add-on and a city chosen in it: nothing religious otherwise.
+        // A removed add-on drops it at once rather than after the next provider read.
+        if (prayerFeed != null && getPackageManager().resolveContentProvider(HomeWidgets.PRAYER_AUTHORITY, 0) == null) {
+            prayerFeed = null;
+        }
+        HomeWidgets.PrayerFeed feed = prayerFeed;
+        long[] next = feed == null ? null
+                : HomeWidgets.nextPrayer(feed.times, java.time.Instant.now(), java.time.ZoneId.systemDefault());
+        hasPrayer = next != null;
+        if (hasPrayer) {
+            int p = (int) next[0];
+            String name = HomeWidgets.name(p, feed.ramadanOn(next[1], java.time.ZoneId.systemDefault()));
+            pillCovers = feed.alerts;
+            prayerIcon.setImageResource(HomeWidgets.prayerIcon(p));
+            prayerKicker.setText(getString(R.string.next_prayer) + "  ·  " + HomeWidgets.ARABIC[p]);
+            prayerLine.setText(name + "  "
+                    + android.text.format.DateFormat.getTimeFormat(this).format(new java.util.Date(next[1])));
+            long left = next[1] - System.currentTimeMillis();
+            String in = HomeWidgets.countdown(left);
+            int level = HomeWidgets.urgency(left, prayerSoonMinutes, prayerImminentMinutes);
+            prayerMeta.setText(level == 0 && feed.hijri != null ? in + "  ·  " + feed.hijri : in);
+            prayerHeadline.setText((level == 1 ? "●  " : "") + getString(R.string.next_prayer) + "  ·  "
+                    + name + " " + in);
+            prayerHeadline.setVisibility(View.VISIBLE);
+            applyUrgency(level);
+        } else {
+            applyUrgency(0);
+            prayerHeadline.setVisibility(View.INVISIBLE);
+        }
+        showCardPages();
+        widgetIo.execute(() -> {
+            HomeWidgets.PrayerFeed f = HomeWidgets.prayerFeed(getContentResolver());
+            boolean changed = !HomeWidgets.PrayerFeed.same(f, prayerFeed);
+            prayerFeed = f;
+            HomeWidgets.Weather w = HomeWidgets.weather(getContentResolver());
+            handler.post(() -> {
+                showWeather(w);
+                if (changed) updateWidgets();
+            });
+        });
+    }
+
+    /** The card's pages for what there is: prayer and weather alternate, one alone stays, none hides the card. */
+    private void showCardPages() {
+        if (!hasPrayer && !hasWeather) {
+            homeWidgets.setVisibility(View.GONE);
+            return;
+        }
+        homeWidgets.setVisibility(View.VISIBLE);
+        if (!hasPrayer) {
+            prayerWidget.animate().cancel();
+            weatherWidget.animate().cancel();
+            prayerWidget.setAlpha(0f);
+            weatherWidget.setAlpha(1f);
+            showingWeather = true;
+        } else if (!hasWeather) {
+            pinPrayerPage();
+        }
+    }
+
+    /**
+     * Styles the card for HomeWidgets.urgency: orange under prayer_soon_minutes, red under prayer_imminent_minutes,
+     * with the countdown as the large line. Under the hour the greeting-line headline stays on in orange; in the
+     * last minutes the Prayer Times add-on's red countdown pill covers every app, Home included, so it steps aside.
+     */
+    private void applyUrgency(int level) {
+        int accent = level == 2 ? 0xFFFF453A : 0xFFFF8A1F;
+        homeWidgets.setBackgroundResource(level == 2 ? R.drawable.widget_glass_imminent
+                : level == 1 ? R.drawable.widget_glass_soon : R.drawable.widget_glass);
+        prayerMeta.setTextColor(level > 0 ? accent : 0x99FFFFFF);
+        prayerMeta.setTextSize(TypedValue.COMPLEX_UNIT_SP, level > 0 ? 30 : 13);
+        prayerLine.setTextSize(TypedValue.COMPLEX_UNIT_SP, level > 0 ? 22 : 26);
+        prayerIcon.setImageTintList(level > 0 ? android.content.res.ColorStateList.valueOf(accent) : null);
+        prayerHeadline.setTextColor(level == 1 ? accent : 0x8CFFFFFF);
+        prayerHeadline.setAlpha(level == 2 && pillCovers ? 0f : level >= 1 ? 1f : 1f - widgetsShown);
+        if (level > 0) pinPrayerPage();
+        if (prayerLevel >= 0 && level != prayerLevel && !reducedMotion && widgetsShown > 0f) {
+            homeWidgets.setAlpha(0.3f * widgetsShown);
+            homeWidgets.animate().alpha(widgetsShown).setDuration(300).start();
+        }
+        prayerLevel = level;
+    }
+
+    /** Holds the card on the prayer page while the prayer is near. */
+    private void pinPrayerPage() {
+        prayerWidget.animate().cancel();
+        weatherWidget.animate().cancel();
+        prayerWidget.setAlpha(1f);
+        weatherWidget.setAlpha(0f);
+        showingWeather = false;
+    }
+
+    private void showWeather(HomeWidgets.Weather w) {
+        hasWeather = w != null;
+        showCardPages();
+        if (w == null) return;
+        weatherIcon.setImageResource(HomeWidgets.weatherIcon(w.code, w.day));
+        weatherKicker.setText(w.place.isEmpty() ? getString(R.string.weather_now)
+                : getString(R.string.weather_now) + "  ·  " + w.place);
+        weatherLine.setText(w.tempC + "°C  " + w.sky);
+        weatherMeta.setText("Feels like " + w.feelsC + "°C");
+    }
+
+    /** config.xml tools_apps that are installed: {label, icon, launch intent} for the Settings menu. */
+    private List<Object[]> toolApps() {
+        PackageManager pm = getPackageManager();
+        List<Object[]> out = new ArrayList<>();
+        for (String pkg : getResources().getStringArray(R.array.tools_apps)) {
+            Intent launch = pm.getLeanbackLaunchIntentForPackage(pkg);
+            if (launch == null) launch = pm.getLaunchIntentForPackage(pkg);
+            if (launch == null) continue;
+            try {
+                android.content.pm.ApplicationInfo ai = pm.getApplicationInfo(pkg, 0);
+                out.add(new Object[]{pm.getApplicationLabel(ai), pm.getApplicationIcon(ai), launch});
+            } catch (PackageManager.NameNotFoundException e) {
+                android.util.Log.w("TvHomeWidgets", "tool app gone: " + pkg, e);
+            }
+        }
+        return out;
+    }
+
+    /** The Settings button with tools_apps: the TV's own settings first, then each tool app. */
+    private void showToolsMenu() {
+        View anchor = findViewById(R.id.btnSettings);
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (240 * density));
+        addSettingsMenuRow(rows, popup, getString(R.string.tv_settings), getDrawable(R.drawable.ic_settings), false,
+                () -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        for (Object[] tool : toolApps()) {
+            Intent launch = (Intent) tool[2];
+            addSettingsMenuRow(rows, popup, (CharSequence) tool[0], (Drawable) tool[1], true, () -> open(launch));
+        }
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (240 * density), panel.getMeasuredWidth()));
+        dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar) ? Gravity.START : Gravity.END);
+        rows.getChildAt(0).requestFocus();
+    }
+
     /**
      * Shows or hides the race-weekend panel for this minute. Text only, set once a minute with the clock:
      * nothing animates, so the panel costs the GPU nothing between ticks.
@@ -3237,9 +3465,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (launcherSettingsButton) {
             addInputRow(rows, popup, R.drawable.ic_home_settings_pill, getString(R.string.launcher_settings), -1,
                     () -> startActivityForResult(new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
-        } else {
+        }
+        // With tools_apps the Settings row opens their list (TV settings first), as the Settings button does.
+        if (!launcherSettingsButton || !toolApps().isEmpty()) {
             addInputRow(rows, popup, R.drawable.ic_settings, getString(R.string.settings), -1,
-                    () -> open(systemIntent(Settings.ACTION_SETTINGS)));
+                    () -> {
+                        if (toolApps().isEmpty()) open(systemIntent(Settings.ACTION_SETTINGS));
+                        else root.post(this::showToolsMenu);
+                    });
         }
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (220 * density), Math.min(panel.getMeasuredWidth(), (int) (360 * density))));
@@ -3255,6 +3488,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
         if (!launcherSettingsButton) addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
+        // tools_apps hidden from the grid stay reachable here too.
+        if (!toolApps().isEmpty()) addSettingsMenuRow(rows, popup, R.string.tv_settings, () -> root.post(this::showToolsMenu));
         // Firmware that ships its own settings app next to the AOSP one (Xiaomi China is one): the
         // vendor app holds pages the AOSP settings has no row for, such as Account & Security with
         // the ADB switch. Offered here only while one of them is installed.
@@ -3333,8 +3568,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, int title, Runnable action) {
+        addSettingsMenuRow(rows, popup, getString(title), null, false, action);
+    }
+
+    /** A menu row with an optional icon: a glyph takes the row's text colour, an app's own icon keeps its colours. */
+    private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, CharSequence title, Drawable icon,
+                                    boolean appIcon, Runnable action) {
         View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
-        row.findViewById(R.id.icon).setVisibility(View.GONE);
+        ImageView iconView = row.findViewById(R.id.icon);
+        if (icon == null) {
+            iconView.setVisibility(View.GONE);
+        } else {
+            iconView.setImageDrawable(icon);
+            if (appIcon) iconView.setImageTintList(null);
+        }
         row.findViewById(R.id.dot).setVisibility(View.GONE);
         row.findViewById(R.id.status).setVisibility(View.GONE);
         ((TextView) row.findViewById(R.id.title)).setText(title);

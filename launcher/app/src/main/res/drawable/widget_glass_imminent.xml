@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The widget card under the alert lead to the prayer: red glass (HomeWidgets.urgency 2). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#40FF453A" />
+    <stroke android:width="2dp" android:color="#FFFF453A" />
+    <corners android:radius="24dp" />
+</shape>

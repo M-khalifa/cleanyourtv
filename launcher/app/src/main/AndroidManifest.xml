@@ -68,6 +68,10 @@
         <!-- Coocaa OS sources for the Inputs menu (coocaa_sources); see CoocaaSources. -->
         <provider android:authorities="com.skyworth.tv.provider" />
         <provider android:authorities="com.skyworth.tv.sdk.provider" />
+        <!-- The Weather add-on's weather now, for the home widgets (home_widgets). -->
+        <provider android:authorities="io.github.sumyabazar1.weather.now" />
+        <!-- The Prayer Times add-on's daily times, so the widget matches its alerts. -->
+        <provider android:authorities="com.majnioui.tv.prayer.times" />
     </queries>
 
     <application

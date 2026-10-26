@@ -94,6 +94,81 @@
             android:letterSpacing="0.12" />
     </LinearLayout>
 
+    <!-- Home widgets (config.xml home_widgets, see HomeWidgets): one frosted card under the top buttons that
+         alternates between the next prayer and the weather now. It scrolls up with the grid. Never focusable. -->
+    <FrameLayout
+        android:id="@+id/homeWidgets"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|right"
+        android:layout_marginEnd="60dp"
+        android:layout_marginTop="124dp"
+        android:minWidth="300dp"
+        android:paddingStart="22dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp"
+        android:background="@drawable/widget_glass"
+        android:focusable="false"
+        android:importantForAccessibility="no"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/prayerWidget"
+            style="@style/WidgetPage">
+
+            <ImageView
+                android:id="@+id/prayerIcon"
+                style="@style/WidgetIcon" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/prayerKicker"
+                    style="@style/WidgetKicker" />
+
+                <TextView
+                    android:id="@+id/prayerLine"
+                    style="@style/WidgetLine" />
+
+                <TextView
+                    android:id="@+id/prayerMeta"
+                    style="@style/WidgetMeta" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/weatherWidget"
+            style="@style/WidgetPage"
+            android:alpha="0">
+
+            <ImageView
+                android:id="@+id/weatherIcon"
+                style="@style/WidgetIcon" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/weatherKicker"
+                    style="@style/WidgetKicker" />
+
+                <TextView
+                    android:id="@+id/weatherLine"
+                    style="@style/WidgetLine" />
+
+                <TextView
+                    android:id="@+id/weatherMeta"
+                    style="@style/WidgetMeta" />
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+
     <!-- Cinematic top shelf: darkens the edge behind the shelf and the lower half, so the text and the
          dock stay readable over the artwork. -->
     <View
@@ -292,6 +367,26 @@
 
             </LinearLayout>
 
+            <!-- Home widgets scrolled away: the next prayer on the greeting's line, at the right, in its type.
+                 Fades in as the widget card fades out (HomeWidgets). -->
+            <TextView
+                android:id="@+id/prayerHeadline"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_alignTop="@id/leftBlock"
+                android:layout_marginEnd="4dp"
+                android:gravity="right"
+                android:singleLine="true"
+                android:textColor="#8CFFFFFF"
+                android:textSize="12sp"
+                android:fontFamily="@string/font_medium"
+                android:letterSpacing="0.22"
+                android:textAllCaps="true"
+                android:alpha="0"
+                android:focusable="false"
+                android:importantForAccessibility="no" />
+
             <!-- Shown only when show_stats is on. Outside leftBlock, so the top buttons stay level with the clock
                  row; gone, it takes no space. -->
             <TextView
@@ -345,6 +440,14 @@
                     android:visibility="gone"
                     android:singleLine="true"
                     android:text="@string/vpn"
+                    android:nextFocusDown="@+id/grid" />
+
+                <TextView
+                    android:id="@+id/btnBluetooth"
+                    style="@style/TopButtonIcon"
+                    android:visibility="gone"
+                    android:contentDescription="@string/bluetooth"
+                    android:drawableStart="@drawable/ic_bluetooth"
                     android:nextFocusDown="@+id/grid" />
 
                 <TextView

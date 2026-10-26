@@ -3,6 +3,9 @@
     <string name="app_name">Home</string>
     <string name="inputs">Inputs</string>
     <string name="wifi">Wi-Fi</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="next_prayer">Next prayer</string>
+    <string name="weather_now">Weather</string>
     <string name="settings">Settings</string>
     <string name="choose_input">Inputs</string>
     <string name="connected">Connected</string>

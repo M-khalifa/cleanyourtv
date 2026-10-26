@@ -146,4 +146,7 @@
     <string name="race_countdown_hours">%1$d שע׳ %2$d דק׳</string>
     <string name="race_countdown_days">%1$d ימ׳ %2$d שע׳</string>
     <string name="last_opened">פתיחה אחרונה: %1$s</string>
+    <string name="bluetooth">Bluetooth</string>
+    <string name="next_prayer">התפילה הבאה</string>
+    <string name="weather_now">מזג האוויר עכשיו</string>
 </resources>

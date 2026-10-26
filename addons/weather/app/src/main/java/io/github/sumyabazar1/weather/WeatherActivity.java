@@ -26,11 +26,11 @@ import java.util.concurrent.Executors;
 
 /**
  * The weather for one place, full screen: now, the air quality and the next days (options.xml). It reads Open-Meteo only
- * while it is on screen (every {@link Forecast#REFRESH_MS}, or {@link Forecast#RETRY_MS} after a failure) and
- * does nothing in the background. The place is chosen once with a search and kept in the app's preferences.
+ * while it is on screen (every {@link Forecast#REFRESH_MS}, or {@link Forecast#RETRY_MS} after a failure), and when
+ * the home widget reads {@link NowProvider}. The place is chosen once with a search and kept in the app's preferences.
  */
 public final class WeatherActivity extends Activity {
-    private static final String PREFS = "place";
+    static final String PREFS = "place";
 
     private final ExecutorService io = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -102,7 +102,10 @@ public final class WeatherActivity extends Activity {
             Forecast.Report result = report;
             main.post(() -> {
                 if (isDestroyed()) return;
-                if (result != null) show(result);
+                if (result != null) {
+                    NowProvider.save(this, place.getString("name", ""), result);
+                    show(result);
+                }
                 else if (!shown) message.setText(R.string.offline);
                 main.postDelayed(tick, result != null ? Forecast.REFRESH_MS : Forecast.RETRY_MS);
             });

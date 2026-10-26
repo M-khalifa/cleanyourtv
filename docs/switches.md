@@ -54,3 +54,9 @@ fits the rules; keys from before the rule sit on its wanted list until a screens
 | `home_long_press_home` | <img src="switches/home_long_press_home.jpg" width="320" alt="home_long_press_home on a TV"> |
 | `vpn_pill` | <img src="switches/vpn_pill.jpg" width="320" alt="vpn_pill on a TV"> |
 | `power_on_home_always` | <img src="switches/power_on_home_always.jpg" width="320" alt="power_on_home_always on a TV"> |
+| `home_widgets` | <img src="switches/home_widgets.jpg" width="320" alt="home_widgets card with the weather now on a TV"> |
+| `prayer_soon_minutes` | <img src="switches/prayer_soon_minutes.jpg" width="320" alt="home_widgets card in orange before the next prayer on a TV"> |
+| `prayer_imminent_minutes` | <img src="switches/prayer_imminent_minutes.jpg" width="320" alt="home_widgets card in red just before the next prayer on a TV"> |
+| `bluetooth_button` | <img src="switches/home_widgets.jpg" width="320" alt="bluetooth_button after the network pill on a TV"> |
+| `tools_apps` | <img src="switches/tools_apps.jpg" width="320" alt="tools_apps listed under the Settings button on a TV"> |
+| `icon_tiles` | <img src="switches/icon_tiles.jpg" width="320" alt="icon_tiles: an app drawn from its icon in the grid on a TV"> |
