@@ -1,33 +1,34 @@
-# Prayer and weather card on Home
+# What this fork adds
 
-This branch adds one glass card to the launcher's Home, under the top buttons. It shows the next prayer
-from the [Prayer Times](addons/prayer-times/) add-on and the weather now from the [Weather](addons/weather/)
-add-on, alternating between the two. With only one of the add-ons installed the card shows that one; with
-neither it stays hidden.
+This fork follows [Gathin23/cleanyourtv](https://github.com/Gathin23/cleanyourtv) and adds the pieces below. All
+of them are off by default; tested on a TCL Q6 (Google TV), Android 12.
+
+## Prayer and weather card on Home
+
+One glass card under the launcher's top buttons with the next prayer from the Prayer Times add-on and the
+weather now from the Weather add-on, alternating between the two. With only one add-on installed the card shows
+that one; with neither it stays hidden. As the prayer gets close it stops alternating and turns orange
+(`prayer_soon_minutes`, 60), then red (`prayer_imminent_minutes`, 15). A weather reading older than three hours is
+not shown.
 
 ![The card with the weather now](docs/switches/home_widgets.jpg)
 
-As the next prayer gets close the card stops alternating and turns orange (`prayer_soon_minutes`, 60 by
-default), then red (`prayer_imminent_minutes`, 15). A weather reading older than three hours is not shown.
+Turn it on in `launcher/app/src/main/res/values/config.xml` with `<bool name="home_widgets">true</bool>`, then
+build and install as usual: `TV_HOST=<tv ip> launcher/build-and-install.sh`. The launcher reads the two add-ons'
+content providers, declared in `<queries>`: no new permission, no network, no background service.
 
-It also carries `bluetooth_button`, `tools_apps` and `icon_tiles`, which are proposed upstream on their own.
+## Three small launcher keys
 
-## Turning it on
+`bluetooth_button`, `tools_apps` and `icon_tiles`, described in [themes/README.md](themes/README.md) and
+[docs/switches.md](docs/switches.md).
 
-The card is off by default. In `launcher/app/src/main/res/values/config.xml` set
+## Prayer Times add-on
 
-```xml
-<bool name="home_widgets">true</bool>
-```
+A settings screen on the TV (city, method, Asr school), and opt-in reminders: a countdown and banner before each
+prayer, the Azan at the prayer time, a morning recitation and Al-Kahf on Fridays, which can wake the TV from
+standby and put it back afterwards. No Azan recording is included; you choose your own. See
+[its README](addons/prayer-times/README.md).
 
-then build and install as usual: `TV_HOST=<tv ip> launcher/build-and-install.sh`. Install the Weather add-on
-from this branch: its `NowProvider` is what the card reads. The prayer side reads a times provider that the
-Prayer Times add-on does not have yet (proposed upstream separately); until then the card shows the weather
-only.
+## Weather add-on
 
-## What it asks for
-
-Nothing new. The launcher reads the two add-ons' content providers, declared in `<queries>`; it adds no
-permission, no network access and no background service.
-
-Tested on a TCL Q6 (Google TV), Android 12.
+`NowProvider`, the current conditions the Home card reads.
