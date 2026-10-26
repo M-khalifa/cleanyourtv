@@ -145,4 +145,5 @@
     <string name="tile_add_to_dock">添加到程序坞</string>
     <string name="tile_move">移动</string>
     <string name="tile_replace_in_dock">替换为其他应用</string>
+    <string name="bluetooth">蓝牙</string>
 </resources>

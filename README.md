@@ -617,7 +617,9 @@ and a wallpaper.
 <summary><b>Launcher settings and the default home</b></summary>
 
 - Click **Settings** for the TV's own settings. Hold OK on it for its menu: **Launcher settings** (with
-  `launcher_settings_button` a click opens those instead and the menu leaves the row out), **Native settings**
+  `launcher_settings_button` a click opens those instead and the menu leaves the row out), **TV system
+  settings** with `tools_apps`, which lists the TV's own settings and those apps (a click on Settings opens the
+  same list then), **Native settings**
   where the TV ships a settings app of its own beside Android's - Xiaomi China, TCL/FFALCON and Fire OS are
   in `settings_fallback_components` - because that app holds pages Android's has no row for, such as
   Xiaomi's Account & Security with the ADB switch; **Module cards** with `module_cards`; **Edit dock** with
