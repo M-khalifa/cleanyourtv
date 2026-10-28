@@ -89,6 +89,15 @@
             android:screenOrientation="landscape"
             android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
 
+        <!-- One-minute warning before standby after a recitation that played to its end (StandbyWarningActivity). -->
+        <activity
+            android:name=".StandbyWarningActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity="com.majnioui.tv.prayer.standby"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+
         <!-- Dark clock a few minutes before an Azan or the recitation, waking a TV in standby (PreWakeActivity). -->
         <activity
             android:name=".PreWakeActivity"

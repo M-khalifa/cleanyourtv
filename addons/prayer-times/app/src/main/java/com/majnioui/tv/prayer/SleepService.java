@@ -29,20 +29,20 @@ public class SleepService extends AccessibilityService {
 
     /** Sends the TV to standby, waiting briefly for the service to bind if it was just put back. */
     static void sleep(Context c) {
-        if (sleepNow()) return;
+        if (sleepNow(c)) return;
         if (!ensureEnabled(c)) {
-            Log.w(TAG, "SleepService is not switched on: the TV stays on");
+            EventLog.w(c, TAG, "SleepService is not switched on: the TV stays on");
             return;
         }
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (!sleepNow()) Log.w(TAG, "SleepService did not bind: the TV stays on");
+            if (!sleepNow(c)) EventLog.w(c, TAG, "SleepService did not bind: the TV stays on");
         }, BIND_WAIT_MS);
     }
 
-    private static boolean sleepNow() {
+    private static boolean sleepNow(Context c) {
         SleepService service = instance;
         if (service == null) return false;
-        Log.i(TAG, "TV back to standby");
+        EventLog.i(c, TAG, "TV back to standby");
         return service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
     }
 

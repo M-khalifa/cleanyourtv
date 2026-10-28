@@ -30,7 +30,9 @@ are build defaults in `config.xml`.
   unless someone pressed a key.
 - **Every morning** at `morning_quran_time` a surah (`morning_quran_url`, Al-Baqarah) at `morning_quran_volume`;
   **on Fridays** Al-Kahf `kahf_minutes_before_dhuhr` before Dhuhr at `kahf_volume`. They pause for an Azan, and a
-  TV they woke goes back to standby at the end.
+  TV they woke goes back to standby at the end. A recitation that plays to its end turns the TV off after a
+  one-minute warning even if the TV was already on; any key on the warning keeps it on. Stopping it, or another
+  app taking the sound, keeps the TV on.
 - **In Ramadan** (Umm al-Qura, with a −2 to +2 day adjustment in Settings) the banners, the Home card and the
   Maghrib Azan window read "Suhoor ends" and "Iftar".
 - **Test the Azan** in Settings plays it at once.

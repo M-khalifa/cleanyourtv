@@ -61,7 +61,7 @@ public class AzanService extends Service {
         @Override
         public void onReceive(Context c, Intent intent) {
             // Turned off with the remote: the Azan stops with the TV.
-            Log.i(TAG, "TV turned off during the Azan");
+            EventLog.i(c, TAG, "TV turned off during the Azan");
             keyPressed = true;
             finish();
         }
@@ -101,19 +101,19 @@ public class AzanService extends Service {
         VolumeGuard.reconcile(this);
         PrayerAlerts.rearmAfterAlarm(this);
         if (late > PrayerAlerts.LATE_MS || at == lastAt) {
-            Log.i(TAG, "Azan " + PrayerAlerts.NAMES[prayer] + (at == lastAt ? ": already played"
+            EventLog.i(this, TAG, "Azan " + PrayerAlerts.NAMES[prayer] + (at == lastAt ? ": already played"
                     : " " + late / 60_000 + " min late (the TV was asleep): skipped"));
             finish();
             return START_NOT_STICKY;
         }
         lastAt = at;
-        Log.i(TAG, "Azan " + PrayerAlerts.NAMES[prayer] + " " + late / 1000 + " s after its time");
+        EventLog.i(this, TAG, "Azan " + PrayerAlerts.NAMES[prayer] + " " + late / 1000 + " s after its time");
         Resources r = getResources();
         plan = WakePlan.azan(prayer, !woke, r.getBoolean(R.bool.azan_wake_tv),
                 r.getInteger(R.integer.azan_volume_fajr), r.getInteger(R.integer.azan_volume));
         CountdownService.stop(this);
         if (plan == null) {
-            Log.i(TAG, "TV in standby and azan_wake_tv is false: Azan skipped");
+            EventLog.i(this, TAG, "TV in standby and azan_wake_tv is false: Azan skipped");
             finish();
             return START_NOT_STICKY;
         }
@@ -166,22 +166,25 @@ public class AzanService extends Service {
         player = MediaPlayer.create(this, android.net.Uri.fromFile(AzanSound.file(this)), null, attrs,
                 audio.generateAudioSessionId());
         if (player == null) {
-            Log.e(TAG, "could not open the Azan audio");
+            EventLog.w(this, TAG, "could not open the Azan audio");
             finish();
             return;
         }
-        player.setOnCompletionListener(mp -> finish());
+        player.setOnCompletionListener(mp -> {
+            EventLog.i(this, TAG, "Azan played to its end");
+            finish();
+        });
         player.setOnErrorListener((mp, what, extra) -> {
-            Log.e(TAG, "Azan playback error " + what + "/" + extra);
+            EventLog.w(this, TAG, "Azan playback error " + what + "/" + extra);
             finish();
             return true;
         });
         player.start();
         main.postDelayed(() -> {
-            Log.w(TAG, "Azan still playing past its length: stopped");
+            EventLog.w(this, TAG, "Azan still playing past its length: stopped");
             finish();
         }, player.getDuration() + GRACE_MS);
-        Log.i(TAG, "Azan playing, " + player.getDuration() / 1000 + " s, volume "
+        EventLog.i(this, TAG, "Azan playing, " + player.getDuration() / 1000 + " s, volume "
                 + audio.getStreamVolume(AudioManager.STREAM_MUSIC) + (plan.wake ? ", TV woken" : ""));
     }
 
@@ -229,7 +232,7 @@ public class AzanService extends Service {
         dismiss.setBackground(states);
         dismiss.setPadding((int) (32 * dp), 0, (int) (32 * dp), 0);
         dismiss.setOnClickListener(v -> {
-            Log.i(TAG, "Azan dismissed");
+            EventLog.i(this, TAG, "Azan dismissed");
             finish();
         });
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
@@ -243,6 +246,7 @@ public class AzanService extends Service {
             // someone watching, but does nothing for the first moments.
             if (android.os.SystemClock.uptimeMillis() - shownAt < KEY_GUARD_MS) return true;
             if (code == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+                EventLog.i(this, TAG, "Back: Azan dismissed");
                 finish();
                 return true;
             }
@@ -271,8 +275,10 @@ public class AzanService extends Service {
 
     private void finish() {
         main.removeCallbacksAndMessages(null);
+        int playedMs = -1;
         if (player != null) {
             try {
+                playedMs = player.getCurrentPosition();
                 player.stop();
             } catch (IllegalStateException e) {
                 Log.w(TAG, "Azan already stopped", e);
@@ -301,6 +307,10 @@ public class AzanService extends Service {
         // with a recitation going on, Handover leaves that to the recitation's end.
         Handover.Step step = handedIn ? Handover.STATE.azanEnd(keyPressed)
                 : new Handover.Step(WakePlan.KEEP, Handover.STATE.standby(WakePlan.sleepAfter(woke, keyPressed)));
+        if (handedIn || playedMs >= 0) {
+            EventLog.i(this, TAG, "Azan ended" + (playedMs >= 0 ? " after " + playedMs / 1000 + " s" : "")
+                    + (keyPressed ? ", key pressed" : "") + (step.sleep ? ", standby" : ""));
+        }
         woke = false;
         plan = null;
         if (step.volume != WakePlan.KEEP) setVolume(step.volume);
@@ -316,7 +326,7 @@ public class AzanService extends Service {
             if (due > 0 && due - System.currentTimeMillis() <= lead) {
                 PreWakeActivity.markWoke(this, due);
                 sleep = false;
-                Log.i(TAG, "a recitation is due in a few minutes: the TV stays on for it");
+                EventLog.i(this, TAG, "a recitation is due in a few minutes: the TV stays on for it");
             }
         }
         if (sleep) SleepService.sleep(getApplicationContext());

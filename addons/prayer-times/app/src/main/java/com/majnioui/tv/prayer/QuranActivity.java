@@ -51,7 +51,7 @@ public class QuranActivity extends Activity {
         @Override
         public void onReceive(Context c, Intent intent) {
             // Turned off with the remote: the recitation stops with the TV.
-            Log.i(TAG, "TV turned off during the recitation");
+            EventLog.i(c, TAG, "TV turned off during the recitation");
             Handover.STATE.recitationKeyPressed();
             finish();
         }
@@ -72,6 +72,9 @@ public class QuranActivity extends Activity {
     private boolean handedOver;
     /** Where a stream that failed mid-way carries on from, in ms. */
     private int resumeAt;
+    /** Played to its end: the TV goes to standby after a warning even if it was on or a key was pressed. */
+    private boolean playedOut;
+    private boolean keyLogged;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -92,7 +95,7 @@ public class QuranActivity extends Activity {
             String skip = skipReason(getIntent());
             if (skip == null && screenOff && !Screen.canPutBack()) skip = "TV in standby; this Android cannot put it back";
             if (skip != null) {
-                Log.i(TAG, "recitation skipped: " + skip);
+                EventLog.i(this, TAG, "recitation skipped: " + skip);
                 finish();
                 // A running Azan puts the TV back at its own end instead.
                 if (Handover.STATE.standby(woke)) SleepService.sleep(this);
@@ -100,7 +103,7 @@ public class QuranActivity extends Activity {
             }
             Handover.STATE.recitationStart(woke, getIntent().getBooleanExtra(EXTRA_CARRY_KEY, false),
                     getIntent().getIntExtra(EXTRA_CARRY_VOLUME, -1));
-            Log.i(TAG, "alarm fired " + (System.currentTimeMillis() - at) / 1000 + " s after its time"
+            EventLog.i(this, TAG, "alarm fired " + (System.currentTimeMillis() - at) / 1000 + " s after its time"
                     + (woke ? ", TV woken" : ""));
         }
         started = true;
@@ -191,7 +194,7 @@ public class QuranActivity extends Activity {
                 audio.getStreamVolume(AudioManager.STREAM_MUSIC));
         if (set != WakePlan.KEEP) {
             setVolume(set);
-            Log.i(TAG, "volume " + audio.getStreamVolume(AudioManager.STREAM_MUSIC) + " of "
+            EventLog.i(this, TAG, "volume " + audio.getStreamVolume(AudioManager.STREAM_MUSIC) + " of "
                     + audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC));
         }
         if (!player.isPlaying()) player.start();
@@ -201,7 +204,7 @@ public class QuranActivity extends Activity {
     private void onFocusChange(int change) {
         if (change == AudioManager.AUDIOFOCUS_LOSS) {
             // Another app took the sound for good, also while loading or retrying: someone watches something else.
-            Log.i(TAG, "another app took the sound: closed");
+            EventLog.i(this, TAG, "another app took the sound: closed");
             Handover.STATE.recitationKeyPressed();
             finish();
             return;
@@ -209,13 +212,13 @@ public class QuranActivity extends Activity {
         if (player == null || !prepared || closing()) return;
         if (change == AudioManager.AUDIOFOCUS_GAIN) {
             if (waitingForSound) {
-                Log.i(TAG, "sound back: carrying on");
+                EventLog.i(this, TAG, "sound back: carrying on");
                 play();
             }
         } else if (player.isPlaying()) {
             player.pause();
             waitingForSound = true;
-            Log.i(TAG, "paused: another sound has the focus");
+            EventLog.i(this, TAG, "paused: another sound has the focus");
         }
     }
 
@@ -238,12 +241,13 @@ public class QuranActivity extends Activity {
             prepared = true;
             tries = 0;
             if (resumeAt > 0) mp.seekTo(resumeAt);
-            Log.i(TAG, "loaded, " + mp.getDuration() / 60_000 + " min" + (resumeAt > 0 ? ", from " + resumeAt / 1000 + " s" : ""));
+            EventLog.i(this, TAG, "loaded, " + mp.getDuration() / 60_000 + " min" + (resumeAt > 0 ? ", from " + resumeAt / 1000 + " s" : ""));
             play();
             tick();
         });
         player.setOnCompletionListener(mp -> {
-            Log.i(TAG, "recitation finished");
+            EventLog.i(this, TAG, "recitation finished");
+            playedOut = true;
             finish();
         });
         player.setOnErrorListener((mp, what, extra) -> {
@@ -288,7 +292,11 @@ public class QuranActivity extends Activity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
-        if (event.getAction() == KeyEvent.ACTION_DOWN && started) Handover.STATE.recitationKeyPressed();
+        if (event.getAction() == KeyEvent.ACTION_DOWN && started) {
+            if (!keyLogged) EventLog.i(this, TAG, "key " + KeyEvent.keyCodeToString(event.getKeyCode()) + ": someone is here");
+            keyLogged = true;
+            Handover.STATE.recitationKeyPressed();
+        }
         return super.dispatchKeyEvent(event);
     }
 
@@ -297,18 +305,18 @@ public class QuranActivity extends Activity {
         super.onNewIntent(intent);
         int kind = intent.getIntExtra(MorningQuran.EXTRA_KIND, MorningQuran.KIND_MORNING);
         if (!started || kind == getIntent().getIntExtra(MorningQuran.EXTRA_KIND, MorningQuran.KIND_MORNING)) {
-            Log.i(TAG, "already playing");
+            EventLog.i(this, TAG, "already playing");
             return;
         }
         String skip = skipReason(intent);
         if (skip != null) {
             // An alarm that would not play anyway never interrupts the one playing.
-            Log.i(TAG, "next recitation skipped (" + skip + "): this one carries on");
+            EventLog.i(this, TAG, "next recitation skipped (" + skip + "): this one carries on");
             return;
         }
         // Another recitation's alarm (Friday's Al-Kahf during a long morning one) takes over, keeping whether this
         // woke the TV, whether someone pressed a key, and the volume to restore at the very end.
-        Log.i(TAG, "next recitation takes over");
+        EventLog.i(this, TAG, "next recitation takes over");
         Object[] carry = Handover.STATE.recitationHandover();
         handedOver = true;
         setIntent(intent.putExtra(EXTRA_CARRY_WOKE, (Boolean) carry[0]).putExtra(EXTRA_CARRY_KEY, (Boolean) carry[1])
@@ -356,7 +364,10 @@ public class QuranActivity extends Activity {
             if (!handedOver && !isChangingConfigurations()) {
                 Handover.Step step = Handover.STATE.recitationEnd();
                 if (step.volume != WakePlan.KEEP) setVolume(step.volume);
+                EventLog.i(this, TAG, "recitation ended" + (playedOut ? " at its end" : " early")
+                        + (step.sleep ? ", standby" : playedOut && Screen.canPutBack() ? ", standby warning" : ", TV stays on"));
                 if (step.sleep) SleepService.sleep(getApplicationContext());
+                else if (playedOut && Screen.canPutBack()) StandbyWarningActivity.show(getApplicationContext());
             }
         }
         super.onDestroy();

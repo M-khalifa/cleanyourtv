@@ -109,7 +109,7 @@ public class PreWakeActivity extends Activity {
         String label = getIntent().getStringExtra(EXTRA_LABEL);
         String time = Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault())
                 .format(DateTimeFormatter.ofPattern("h:mm a", Locale.US));
-        Log.i(TAG, "TV woken early for " + label + " at " + time);
+        EventLog.i(this, TAG, "TV woken early for " + label + " at " + time);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -142,7 +142,7 @@ public class PreWakeActivity extends Activity {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            Log.i(TAG, "key pressed on the early-wake clock: the TV stays on");
+            EventLog.i(this, TAG, "key pressed on the early-wake clock: the TV stays on");
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().remove(KEY_WOKE_FOR).apply();
             finish();
             return true;
