@@ -16,10 +16,10 @@ import java.util.function.Function;
 public class PrayerAlertsTest {
     private static final ZoneId CHICAGO = ZoneId.of("America/Chicago");
 
-    /** The ISNA calculation for Frisco, as the alerts use for days without Aladhan times. */
+    /** The ISNA calculation for Chicago, as the alerts use for days without Aladhan times. */
     private static final Function<LocalDate, int[]> ISNA = day -> {
         double tz = CHICAGO.getRules().getOffset(day.atTime(12, 0).atZone(CHICAGO).toInstant()).getTotalSeconds() / 3600.0;
-        return PrayerTimes.compute(day.getYear(), day.getMonthValue(), day.getDayOfMonth(), 33.1507, -96.8236, tz, 15, 15);
+        return PrayerTimes.compute(day.getYear(), day.getMonthValue(), day.getDayOfMonth(), 41.8781, -87.6298, tz, 15, 15);
     };
 
     private static Instant at(int day, int hour, int minute) {
@@ -36,17 +36,17 @@ public class PrayerAlertsTest {
         long[] n = PrayerAlerts.next(ISNA, 15, 60, at(24, 10, 0), CHICAGO);
         assertEquals(PrayerTimes.DHUHR, n[1]);
         assertEquals(PrayerAlerts.SOON, n[2]);
-        assertEquals("12:11", clock(n[0]));
+        assertEquals("11:35", clock(n[0]));
     }
 
     @Test
     public void thenFifteenMinutesBeforeThenAtThePrayer() {
-        long[] before = PrayerAlerts.next(ISNA, 15, 60, at(24, 12, 12), CHICAGO);
+        long[] before = PrayerAlerts.next(ISNA, 15, 60, at(24, 11, 36), CHICAGO);
         assertEquals(PrayerAlerts.BEFORE, before[2]);
-        assertEquals("12:56", clock(before[0]));
-        long[] onTime = PrayerAlerts.next(ISNA, 15, 60, at(24, 12, 57), CHICAGO);
+        assertEquals("12:20", clock(before[0]));
+        long[] onTime = PrayerAlerts.next(ISNA, 15, 60, at(24, 12, 21), CHICAGO);
         assertEquals(PrayerAlerts.AT, onTime[2]);
-        assertEquals("13:11", clock(onTime[0]));
+        assertEquals("12:35", clock(onTime[0]));
     }
 
     @Test
@@ -59,21 +59,21 @@ public class PrayerAlertsTest {
 
     @Test
     public void storedDailyTimesWinOverTheCalculation() {
-        int[] aladhan = {6 * 60 + 31, 7 * 60 + 40, 13 * 60 + 12, 16 * 60 + 21, 18 * 60 + 45, 19 * 60 + 53};
+        int[] aladhan = {5 * 60 + 57, 7 * 60 + 14, 12 * 60 + 36, 15 * 60 + 30, 17 * 60 + 56, 19 * 60 + 14};
         Function<LocalDate, int[]> times = day -> day.getDayOfMonth() == 24 ? aladhan : ISNA.apply(day);
-        long[] n = PrayerAlerts.next(times, 15, 60, at(24, 18, 0), CHICAGO);
+        long[] n = PrayerAlerts.next(times, 15, 60, at(24, 17, 0), CHICAGO);
         assertEquals(PrayerTimes.MAGHRIB, n[1]);
-        assertEquals("18:30", clock(n[0]));
-        long[] p = PrayerAlerts.nextPrayer(times, at(24, 18, 0), CHICAGO);
-        assertEquals("18:45", clock(p[0]));
+        assertEquals("17:41", clock(n[0]));
+        long[] p = PrayerAlerts.nextPrayer(times, at(24, 17, 0), CHICAGO);
+        assertEquals("17:56", clock(p[0]));
     }
 
     @Test
     public void aDayOfAlertsInOrder() {
-        long[][] all = PrayerAlerts.upcoming(ISNA, 15, 60, at(24, 16, 45), CHICAGO, PrayerAlerts.ALARM_SLOTS);
+        long[][] all = PrayerAlerts.upcoming(ISNA, 15, 60, at(24, 15, 45), CHICAGO, PrayerAlerts.ALARM_SLOTS);
         assertEquals(PrayerTimes.MAGHRIB, all[0][1]);
         assertEquals(PrayerAlerts.SOON, all[0][2]);
-        assertEquals("17:44", clock(all[0][0]));
+        assertEquals("16:55", clock(all[0][0]));
         for (int i = 1; i < all.length; i++) assertTrue(all[i][0] > all[i - 1][0]);
         assertEquals(PrayerTimes.ASR, all[14][1]);
         assertEquals(PrayerAlerts.AT, all[14][2]);
@@ -83,7 +83,7 @@ public class PrayerAlertsTest {
     public void noHourWarningWhenItIsOff() {
         long[] n = PrayerAlerts.next(ISNA, 15, 0, at(24, 10, 0), CHICAGO);
         assertEquals(PrayerAlerts.BEFORE, n[2]);
-        assertEquals("12:56", clock(n[0]));
+        assertEquals("12:20", clock(n[0]));
     }
 
     @Test
