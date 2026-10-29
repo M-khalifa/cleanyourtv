@@ -25,6 +25,8 @@ final class HomeWidgets {
     private static final String PRAYER_TIMES = "content://" + PRAYER_AUTHORITY;
     private static final long WEATHER_MAX_AGE_MS = 3 * 60 * 60_000L;
     private static final String TAG = "TvHomeWidgets";
+    static final long LIVE_TIMEOUT_MS = 1_500L;
+    private static final java.util.Timer LIVE_TIMEOUT = new java.util.Timer("widget-row-timeout", true);
 
     private HomeWidgets() {
     }
@@ -166,6 +168,43 @@ final class HomeWidgets {
             Log.w(TAG, "weather read failed", e);
             return null;
         }
+    }
+
+    /**
+     * The first row of a live card's provider (docs/specs/widget-source.md) as a widget page, or null. The provider
+     * must be content://{pkg}.card and belong to {pkg}; anything else is not read.
+     */
+    static WidgetPages.Item live(ContentResolver resolver, android.content.pm.PackageManager pm, String pkg, String label) {
+        String authority = pkg + ".card";
+        try {
+            android.content.pm.ProviderInfo info = pm.resolveContentProvider(authority, 0);
+            if (info == null || !pkg.equals(info.packageName)) return null;
+            // Ends the read early only for a provider that honours the signal; MainActivity bounds the wait itself.
+            android.os.CancellationSignal cancel = new android.os.CancellationSignal();
+            java.util.TimerTask timeout = new java.util.TimerTask() {
+                @Override
+                public void run() {
+                    cancel.cancel();
+                }
+            };
+            LIVE_TIMEOUT.schedule(timeout, LIVE_TIMEOUT_MS);
+            try (Cursor c = resolver.query(Uri.parse("content://" + authority), null, null, null, null, cancel)) {
+                if (c == null || !c.moveToFirst()) return null;
+                return WidgetPages.fromRow(pkg, optString(c, "caption"), optString(c, "line"), optString(c, "kicker"),
+                        optString(c, "meta"), optInt(c, "alert", 0) == 1, optInt(c, "urgent", 0) == 1,
+                        optString(c, "kind"), label);
+            } finally {
+                timeout.cancel();
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, pkg + " widget row failed", e);
+            return null;
+        }
+    }
+
+    private static String optString(Cursor c, String column) {
+        int i = c.getColumnIndex(column);
+        return i < 0 || c.isNull(i) ? null : c.getString(i);
     }
 
     /** An older Weather add-on has no code or day column. */

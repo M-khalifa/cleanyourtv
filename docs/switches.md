@@ -60,6 +60,7 @@ fits the rules; keys from before the rule sit on its wanted list until a screens
 | `home_widgets` | <img src="switches/home_widgets.jpg" width="320" alt="home_widgets card with the weather now on a TV"> |
 | `prayer_soon_minutes` | <img src="switches/prayer_soon_minutes.jpg" width="320" alt="home_widgets card in orange before the next prayer on a TV"> |
 | `prayer_imminent_minutes` | <img src="switches/prayer_imminent_minutes.jpg" width="320" alt="home_widgets card in red just before the next prayer on a TV"> |
+| `widget_sources` | <img src="switches/widget_sources.jpg" width="320" alt="home widget on its memory page, one of its sources, on a TV"> |
 | `bluetooth_button` | <img src="switches/bluetooth_button.jpg" width="320" alt="bluetooth_button after the network pill on a TV"> |
 | `tools_apps` | <img src="switches/tools_apps.jpg" width="320" alt="tools_apps listed under the Settings button on a TV"> |
 | `inputs_connected_only` | <img src="switches/inputs_connected_only.jpg" width="320" alt="inputs_connected_only on a TV"> |

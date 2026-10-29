@@ -210,27 +210,34 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean pillCovers = true;
     /** The card's visibility from the grid scroll, 1 at rest and 0 once scrolled away. */
     private float widgetsShown = 1f;
-    private View prayerWidget, weatherWidget;
-    /** The card shows the weather page now; it turns every WIDGET_FLIP_MS while there is weather to show. */
-    private boolean showingWeather;
+    private View prayerWidget, weatherWidget, widgetPage;
+    private TextView widgetPageKicker, widgetPageLine, widgetPageMeta;
+    private ImageView widgetPageIcon;
     private boolean hasWeather;
-    private static final long WIDGET_FLIP_MS = 6_000L;
+    /** The widget's sources in order (WidgetPages; config.xml widget_sources, Launcher settings on the TV). */
+    private List<String> widgetOn = new ArrayList<>();
+    private long widgetFlipMs = 6_000L;
+    /** {package, label} of the live module cards, found on widgetIo at each resume. */
+    private volatile List<String[]> liveSources = new ArrayList<>();
+    /** The pages other than prayer and weather, as last read on widgetIo. */
+    private Map<String, WidgetPages.Item> widgetItems = new HashMap<>();
+    /** The source on the widget now; null while it is hidden. */
+    private String shownPage;
     private final Runnable widgetFlip = new Runnable() {
         @Override
         public void run() {
-            if (hasPrayer && prayerLevel > 0) {
-                pinPrayerPage();
-            } else if (hasWeather && hasPrayer) {
-                showingWeather = !showingWeather;
-                long ms = reducedMotion ? 0 : 450;
-                prayerWidget.animate().alpha(showingWeather ? 0f : 1f).setDuration(ms).start();
-                weatherWidget.animate().alpha(showingWeather ? 1f : 0f).setDuration(ms).start();
-            }
-            handler.postDelayed(this, WIDGET_FLIP_MS);
+            readWidgetItems(true);
+            handler.postDelayed(this, widgetFlipMs);
         }
     };
     /** The weather read is a call into the Weather add-on's process: kept off the UI thread. */
     private final java.util.concurrent.ExecutorService widgetIo = java.util.concurrent.Executors.newSingleThreadExecutor();
+    /** Add-on rows, one thread per read, so a hung add-on never holds widgetIo past HomeWidgets.LIVE_TIMEOUT_MS. */
+    private final java.util.concurrent.ExecutorService liveIo = java.util.concurrent.Executors.newCachedThreadPool();
+    /** Add-ons whose last read has not returned yet: skipped until it does, so a hung one holds one thread at most. */
+    private static final java.util.Set<String> liveBusy = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    /** One read of the widget's pages at a time; a turn that finds one running keeps the pages it has. */
+    private final java.util.concurrent.atomic.AtomicBoolean widgetReading = new java.util.concurrent.atomic.AtomicBoolean();
     private TextView btnBluetooth;
     /** game_day: each team's next game from an add-on, rotating in the race panel; null when the key is off. */
     private GameDay gameDay;
@@ -337,7 +344,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * Between onResume and onPause: Home is in front. The idle clock only runs then; a key's ACTION_UP can still
      * reach Home after onPause, when that key opened another app, and must not start the clock over the app.
      */
-    private boolean resumed;
+    private volatile boolean resumed;
     /** Rebuild the tiles on the way back to Home only when apps changed meanwhile (TileRefresh). */
     private final TileRefresh tileRefresh = new TileRefresh();
     /** PackageManager's change counter at the last rebuild, to catch a package broadcast that never arrived. */
@@ -445,18 +452,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             updateClockVisibility();
         }
     };
+    /** Just past the next whole minute, so the widget's "in N min" turns with the clock and the prayer pill. */
+    private static long toNextMinute() {
+        return MINUTE_MS - System.currentTimeMillis() % MINUTE_MS + 50;
+    }
+
     private final Runnable minuteTick = new Runnable() {
         @Override
         public void run() {
             updateGreeting();
             updatePanel();
             updateWidgets();
-            // The pill follows the network callbacks and each return to Home; only the diya's flame follows the
-            // signal level, so only it needs this minute's binder calls (about 7 ms on the UI thread).
-            if (festive) updateWifiLabel();
+            // The pill follows the network callbacks and each return to Home; the Wi-Fi bars and the diya's flame
+            // follow the signal level, read here once a minute (about 7 ms on the UI thread).
+            updateWifiLabel();
             sky.update();
             wallpaperPlayer.update();
-            handler.postDelayed(this, MINUTE_MS);
+            handler.postDelayed(this, toNextMinute());
         }
     };
 
@@ -589,6 +601,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         weatherIcon = findViewById(R.id.weatherIcon);
         prayerWidget = findViewById(R.id.prayerWidget);
         weatherWidget = findViewById(R.id.weatherWidget);
+        widgetPage = findViewById(R.id.widgetPage);
+        widgetPageKicker = findViewById(R.id.widgetPageKicker);
+        widgetPageLine = findViewById(R.id.widgetPageLine);
+        widgetPageMeta = findViewById(R.id.widgetPageMeta);
+        widgetPageIcon = findViewById(R.id.widgetPageIcon);
         raceBar = findViewById(R.id.raceBar);
         racePager = findViewById(R.id.racePager);
         gameDay = GameDay.create(this, cfg.gameDay, handler, this::updatePanel);
@@ -1134,9 +1151,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (gameDay != null) gameDay.start();
         sky.update();
         wallpaperPlayer.start();
-        handler.postDelayed(minuteTick, MINUTE_MS);
+        handler.postDelayed(minuteTick, toNextMinute());
         handler.removeCallbacks(widgetFlip);
-        if (homeWidgetsOn) handler.postDelayed(widgetFlip, WIDGET_FLIP_MS);
+        if (homeWidgetsOn) {
+            loadWidget();
+            handler.postDelayed(widgetFlip, widgetFlipMs);
+        }
         if (festive && diya != null) {
             diya.start();
             LocalDate today = LocalDate.now();
@@ -1372,6 +1392,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onDestroy();
         if (gameDay != null) gameDay.shutdown();
         widgetIo.shutdownNow();
+        liveIo.shutdownNow();
         unregisterReceiver(packageReceiver);
         wallpaperPlayer.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
@@ -2717,7 +2738,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (prayerFeed != null && getPackageManager().resolveContentProvider(HomeWidgets.PRAYER_AUTHORITY, 0) == null) {
             prayerFeed = null;
         }
-        HomeWidgets.PrayerFeed feed = prayerFeed;
+        HomeWidgets.PrayerFeed feed = widgetOn.contains(WidgetPages.PRAYER) ? prayerFeed : null;
         long[] next = feed == null ? null
                 : HomeWidgets.nextPrayer(feed.times, java.time.Instant.now(), java.time.ZoneId.systemDefault());
         hasPrayer = next != null;
@@ -2743,11 +2764,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         showCardPages();
         if (widgetIo.isShutdown()) return;
+        // An unticked page's add-on is not read at all.
+        boolean readPrayer = widgetOn.contains(WidgetPages.PRAYER), readWeather = widgetOn.contains(WidgetPages.WEATHER);
         widgetIo.execute(() -> {
-            HomeWidgets.PrayerFeed f = HomeWidgets.prayerFeed(getContentResolver());
+            HomeWidgets.PrayerFeed f = readPrayer ? HomeWidgets.prayerFeed(getContentResolver()) : null;
             boolean changed = !HomeWidgets.PrayerFeed.same(f, prayerFeed);
             prayerFeed = f;
-            HomeWidgets.Weather w = HomeWidgets.weather(getContentResolver());
+            HomeWidgets.Weather w = readWeather ? HomeWidgets.weather(getContentResolver()) : null;
             handler.post(() -> {
                 // A read that lands after Home left the front waits for the next resume's own read.
                 if (!resumed || isDestroyed()) return;
@@ -2758,21 +2781,209 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /** The card's pages for what there is: prayer and weather alternate, one alone stays, none hides the card. */
+    /** After new data: the widget shows a page that still has something, or hides when none has. */
     private void showCardPages() {
-        if (!hasPrayer && !hasWeather) {
+        List<String> pages = cardPages();
+        if (pages.isEmpty()) {
+            showPage(null, false);
+        } else if (hasPrayer && prayerLevel > 0) {
+            pinPrayerPage();
+        } else {
+            String urgent = urgentPage();
+            showPage(urgent != null ? urgent : pages.contains(shownPage) ? shownPage : pages.get(0), false);
+        }
+    }
+
+    /** The enabled sources that have something to show now, in their order. */
+    private List<String> cardPages() {
+        List<String> out = new ArrayList<>();
+        Map<String, WidgetPages.Item> items = widgetItems;
+        for (String s : widgetOn) {
+            if (WidgetPages.PRAYER.equals(s) ? hasPrayer : WidgetPages.WEATHER.equals(s) ? hasWeather : items.containsKey(s)) out.add(s);
+        }
+        return out;
+    }
+
+    /** The first enabled add-on page that asks to stay on screen, or null. */
+    private String urgentPage() {
+        Map<String, WidgetPages.Item> items = widgetItems;
+        for (String s : widgetOn) {
+            WidgetPages.Item item = items.get(s);
+            if (item != null && item.urgent) return s;
+        }
+        return null;
+    }
+
+    private String nextPage() {
+        List<String> pages = cardPages();
+        int i = WidgetPages.next(pages.indexOf(shownPage), pages.size());
+        return i < 0 ? null : pages.get(i);
+    }
+
+    /** Fades the widget to {@code page}'s view, filling the shared page for every source but prayer and weather. */
+    private void showPage(String page, boolean animate) {
+        if (page == null) {
             homeWidgets.setVisibility(View.GONE);
+            shownPage = null;
             return;
         }
-        homeWidgets.setVisibility(View.VISIBLE);
-        if (!hasPrayer) {
-            prayerWidget.animate().cancel();
-            weatherWidget.animate().cancel();
-            prayerWidget.setAlpha(0f);
-            weatherWidget.setAlpha(1f);
-            showingWeather = true;
-        } else if (!hasWeather) {
-            pinPrayerPage();
+        View target = WidgetPages.PRAYER.equals(page) ? prayerWidget : WidgetPages.WEATHER.equals(page) ? weatherWidget : widgetPage;
+        if (target == widgetPage) {
+            WidgetPages.Item item = widgetItems.get(page);
+            if (item == null) return;
+            widgetPageIcon.setImageResource(widgetIcon(item));
+            widgetPageKicker.setText(item.kicker);
+            widgetPageKicker.setTextColor(item.alert ? 0xFFFF453A : 0x99FFFFFF);
+            widgetPageLine.setText(item.line);
+            fitWidgetLine(item.line);
+            widgetPageMeta.setText(item.meta);
+            widgetPageMeta.setTextColor(item.alert ? 0xFFFF8A1F : 0x99FFFFFF);
         }
+        homeWidgets.setVisibility(View.VISIBLE);
+        if (page.equals(shownPage)) return;
+        shownPage = page;
+        long ms = animate && !reducedMotion ? 450 : 0;
+        for (View v : new View[]{prayerWidget, weatherWidget, widgetPage}) {
+            v.animate().cancel();
+            if (ms == 0) v.setAlpha(v == target ? 1f : 0f);
+            else v.animate().alpha(v == target ? 1f : 0f).setDuration(ms).start();
+        }
+    }
+
+    /** The widget keeps one size: a line too long for it at 26sp goes to two lines at 18sp, then is cut. */
+    private void fitWidgetLine(String line) {
+        ViewGroup.MarginLayoutParams icon = (ViewGroup.MarginLayoutParams) widgetPageIcon.getLayoutParams();
+        float room = homeWidgets.getLayoutParams().width - homeWidgets.getPaddingStart() - homeWidgets.getPaddingEnd()
+                - icon.width - icon.getMarginEnd();
+        TextPaint paint = new TextPaint(widgetPageLine.getPaint());
+        paint.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 26, getResources().getDisplayMetrics()));
+        boolean small = paint.measureText(line) > room;
+        widgetPageLine.setSingleLine(!small);
+        if (small) widgetPageLine.setMaxLines(2);
+        widgetPageLine.setTextSize(TypedValue.COMPLEX_UNIT_SP, small ? 18 : 26);
+    }
+
+    /** Holds the widget on the prayer page while the prayer is near. */
+    private void pinPrayerPage() {
+        showPage(WidgetPages.PRAYER, false);
+    }
+
+    /**
+     * Turns to the next page now ({@code turn}) with the pages last read, then reads every enabled page except prayer
+     * and weather off the UI thread (system values and add-on rows) unless a read is already running.
+     */
+    private void readWidgetItems(boolean turn) {
+        if (turn && !(hasPrayer && prayerLevel > 0) && urgentPage() == null) showPage(nextPage(), true);
+        if (widgetIo.isShutdown() || !widgetReading.compareAndSet(false, true)) return;
+        List<String> sources = new ArrayList<>(widgetOn);
+        android.content.ContentResolver resolver = getApplicationContext().getContentResolver();
+        android.content.pm.PackageManager pm = getApplicationContext().getPackageManager();
+        try {
+            widgetIo.execute(() -> {
+                Map<String, WidgetPages.Item> items = new HashMap<>();
+                try {
+                    // Read here, after loadWidget's liveSources task on the same thread, not when this was queued.
+                    List<String[]> live = liveSources;
+                    Map<String, java.util.concurrent.Future<WidgetPages.Item>> rows = new java.util.LinkedHashMap<>();
+                    for (String s : sources) {
+                        if (!resumed) return;
+                        if (!s.startsWith(WidgetPages.APP)) {
+                            WidgetPages.Item item = statusItem(s);
+                            if (item != null) items.put(s, item);
+                            continue;
+                        }
+                        String pkg = s.substring(WidgetPages.APP.length());
+                        String label = liveLabel(live, pkg);
+                        if (label == null || !liveBusy.add(pkg)) continue;
+                        try {
+                            rows.put(s, liveIo.submit(() -> {
+                                try {
+                                    return HomeWidgets.live(resolver, pm, pkg, label);
+                                } finally {
+                                    liveBusy.remove(pkg);
+                                }
+                            }));
+                        } catch (java.util.concurrent.RejectedExecutionException e) {
+                            liveBusy.remove(pkg);
+                        }
+                    }
+                    long until = System.currentTimeMillis() + HomeWidgets.LIVE_TIMEOUT_MS;
+                    for (Map.Entry<String, java.util.concurrent.Future<WidgetPages.Item>> e : rows.entrySet()) {
+                        try {
+                            WidgetPages.Item item = e.getValue().get(Math.max(0, until - System.currentTimeMillis()),
+                                    java.util.concurrent.TimeUnit.MILLISECONDS);
+                            if (item != null) items.put(e.getKey(), item);
+                        } catch (java.util.concurrent.TimeoutException t) {
+                            android.util.Log.w("TvHomeWidgets", e.getKey() + " widget row took over "
+                                    + HomeWidgets.LIVE_TIMEOUT_MS + " ms: skipped this turn");
+                        } catch (java.util.concurrent.ExecutionException | InterruptedException x) {
+                            android.util.Log.w("TvHomeWidgets", e.getKey() + " widget row failed", x);
+                            if (x instanceof InterruptedException) return;
+                        }
+                    }
+                } finally {
+                    widgetReading.set(false);
+                }
+                handler.post(() -> {
+                    if (!resumed || isDestroyed()) return;
+                    widgetItems = items;
+                    showCardPages();
+                });
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            widgetReading.set(false);
+        }
+    }
+
+    /** The live card's label for {@code pkg}, or null when the package no longer has a live card. */
+    private static String liveLabel(List<String[]> live, String pkg) {
+        for (String[] s : live) {
+            if (s[0].equals(pkg)) return s[1];
+        }
+        return null;
+    }
+
+    /** A source the launcher reads itself; null when it has nothing now. Runs on widgetIo. */
+    private WidgetPages.Item statusItem(String source) {
+        try {
+            switch (source) {
+                case WidgetPages.ADB:
+                    return WidgetPages.adb(Settings.Global.getInt(getContentResolver(), Settings.Global.ADB_ENABLED, 0) == 1,
+                            Settings.Global.getInt(getContentResolver(), "adb_wifi_enabled", 0) == 1);
+                case WidgetPages.MEMORY: {
+                    android.app.ActivityManager.MemoryInfo mi = new android.app.ActivityManager.MemoryInfo();
+                    getSystemService(android.app.ActivityManager.class).getMemoryInfo(mi);
+                    android.os.StatFs data = new android.os.StatFs(android.os.Environment.getDataDirectory().getPath());
+                    return WidgetPages.memory(mi.availMem, mi.totalMem, data.getAvailableBytes(), data.getTotalBytes());
+                }
+                default:
+                    return null;
+            }
+        } catch (RuntimeException e) {
+            android.util.Log.w("TvHomeWidgets", "widget " + source + " failed", e);
+            return null;
+        }
+    }
+
+    /** A launcher-owned icon by the page's kind; an add-on never supplies its own drawable. */
+    private static int widgetIcon(WidgetPages.Item item) {
+        switch (item.kind) {
+            case "news": return R.drawable.ic_news;
+            case WidgetPages.ADB:
+            case "alert": return R.drawable.ic_lock;
+            case WidgetPages.MEMORY: return R.drawable.ic_memory;
+            default: return R.drawable.ic_event;
+        }
+    }
+
+    /** The widget's sources and speed (Launcher settings, else config.xml), then the live cards and their rows. */
+    private void loadWidget() {
+        SharedPreferences p = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
+        widgetOn = WidgetPages.enabled(p.getString(WidgetPages.PREF_SOURCES, null), getResources().getStringArray(R.array.widget_sources));
+        widgetFlipMs = WidgetPages.seconds(p.getInt(WidgetPages.PREF_SECONDS, 0)) * 1000L;
+        if (widgetIo.isShutdown()) return;
+        widgetIo.execute(() -> liveSources = Cards.liveSources(this));
+        readWidgetItems(false);
     }
 
     /**
@@ -2798,17 +3009,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         prayerLevel = level;
     }
 
-    /** Holds the card on the prayer page while the prayer is near. */
-    private void pinPrayerPage() {
-        prayerWidget.animate().cancel();
-        weatherWidget.animate().cancel();
-        prayerWidget.setAlpha(1f);
-        weatherWidget.setAlpha(0f);
-        showingWeather = false;
-    }
-
     private void showWeather(HomeWidgets.Weather w) {
-        hasWeather = w != null;
+        hasWeather = w != null && widgetOn.contains(WidgetPages.WEATHER);
         showCardPages();
         if (w == null) return;
         weatherIcon.setImageResource(HomeWidgets.weatherIcon(w.code, w.day));
@@ -3002,6 +3204,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         root.invalidate();   // a resume that changes nothing on screen still draws once, so the refresh runs
     }
 
+    private static final int[] WIFI_BARS = {R.drawable.ic_wifi_1, R.drawable.ic_wifi_2, R.drawable.ic_wifi};
+
     /** Shows the Wi-Fi network name on the button when we can read it, otherwise the connection type. */
     private void updateWifiLabel() {
         String text = getString(R.string.wifi);
@@ -3041,6 +3245,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 WifiInfo info = wm != null ? wm.getConnectionInfo() : null;
                 String ssid = info != null ? info.getSSID() : null;
                 flame = info != null ? Math.max(1, Math.min(4, WifiManager.calculateSignalLevel(info.getRssi(), 5))) : 3;
+                if (info != null) icon = WIFI_BARS[WidgetPages.wifiBars(info.getRssi()) - 1];
                 if (ssid != null) {
                     ssid = ssid.replace("\"", "").trim();
                     if (!ssid.isEmpty() && !ssid.contains("unknown") && !ssid.equals("0x")) text = ssid;

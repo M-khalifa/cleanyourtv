@@ -105,15 +105,14 @@
     </LinearLayout>
 
     <!-- Home widgets (config.xml home_widgets, see HomeWidgets): one frosted card under the top buttons that
-         alternates between the next prayer and the weather now. It scrolls up with the grid. Never focusable. -->
+         turns through its pages (WidgetPages), one fixed size for all of them. It scrolls up with the grid. Never focusable. -->
     <FrameLayout
         android:id="@+id/homeWidgets"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="440dp"
+        android:layout_height="128dp"
         android:layout_gravity="top|right"
         android:layout_marginEnd="60dp"
         android:layout_marginTop="124dp"
-        android:minWidth="300dp"
         android:paddingStart="22dp"
         android:paddingEnd="24dp"
         android:paddingTop="16dp"
@@ -132,7 +131,8 @@
                 style="@style/WidgetIcon" />
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
@@ -160,7 +160,8 @@
                 style="@style/WidgetIcon" />
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
@@ -174,6 +175,35 @@
 
                 <TextView
                     android:id="@+id/weatherMeta"
+                    style="@style/WidgetMeta" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widgetPage"
+            style="@style/WidgetPage"
+            android:alpha="0">
+
+            <ImageView
+                android:id="@+id/widgetPageIcon"
+                style="@style/WidgetIcon" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widgetPageKicker"
+                    style="@style/WidgetKicker" />
+
+                <TextView
+                    android:id="@+id/widgetPageLine"
+                    style="@style/WidgetLine" />
+
+                <TextView
+                    android:id="@+id/widgetPageMeta"
                     style="@style/WidgetMeta" />
             </LinearLayout>
         </LinearLayout>
