@@ -516,6 +516,13 @@
          (imminent, the same lead as the Prayer Times add-on's banner). -->
     <integer name="prayer_soon_minutes">60</integer>
     <integer name="prayer_imminent_minutes">15</integer>
+    <!-- What the home widget shows, in this order (Launcher settings > Home widget changes it on the TV): prayer,
+         weather, adb (only while debugging is on), memory (RAM and storage in use), and app:<package> for an add-on whose module
+         card says live="true" (docs/specs/widget-source.md). -->
+    <string-array name="widget_sources" translatable="false">
+        <item>prayer</item>
+        <item>weather</item>
+    </string-array>
     <!-- A round Bluetooth button after Wi-Fi in the top bar; dimmed while Bluetooth is off. -->
     <bool name="bluetooth_button">false</bool>
     <!-- Apps the Settings button lists under the TV's own settings (kept off the grid with hidden_apps). -->

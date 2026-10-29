@@ -151,4 +151,14 @@
     <string name="next_prayer">התפילה הבאה</string>
     <string name="weather_now">מזג האוויר עכשיו</string>
     <string name="game_live">בשידור חי עכשיו</string>
+    <string name="widget_state">ווידג׳ט הבית: %1$s</string>
+    <string name="widget_speed_state">דף ווידג׳ט הבית: %1$s</string>
+    <string name="widget_seconds">כל %1$d שניות</string>
+    <string name="widget_title">ווידג׳ט הבית: OK מפעיל או מכבה מקור</string>
+    <string name="widget_first">הצג ראשון…</string>
+    <string name="widget_none">כלום</string>
+    <string name="widget_prayer">התפילה הבאה</string>
+    <string name="widget_weather">מזג אוויר</string>
+    <string name="widget_adb">אזהרת ניפוי באגים</string>
+    <string name="widget_memory">זיכרון ואחסון</string>
 </resources>

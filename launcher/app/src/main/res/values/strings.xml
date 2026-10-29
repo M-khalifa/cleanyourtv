@@ -157,4 +157,14 @@
     <string name="last_opened">Last opened %1$s</string>
     <!-- game_day: a game on now, in the race panel. -->
     <string name="game_live">Live now</string>
+    <string name="widget_state">Home widget: %1$s</string>
+    <string name="widget_speed_state">Home widget page: %1$s</string>
+    <string name="widget_seconds">every %1$d s</string>
+    <string name="widget_title">Home widget: OK turns a source on or off</string>
+    <string name="widget_first">Show first…</string>
+    <string name="widget_none">nothing</string>
+    <string name="widget_prayer">Next prayer</string>
+    <string name="widget_weather">Weather</string>
+    <string name="widget_adb">Debugging warning</string>
+    <string name="widget_memory">Memory and storage</string>
 </resources>
