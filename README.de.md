@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/PRESS.md"><img src="docs/card.jpg" alt="355 TV-Modelle · 97 Marken · 29 Sprachen · Launcher mit 532 KB. Erwähnt in TechCrunch, TechRadar, Tom's Guide, Mashable, Android Authority, XDA, FlatpanelsHD, It's FOSS, Phandroid, GIGAZINE, Xataka, WinFuture, Frandroid, Macitynet, Techaeris, TechPP und 298 weitere: 314 Artikel aus 44 Ländern. Vorher: der Google-TV-Startbildschirm mit einer bezahlten Anzeige. Nachher: der Clean-Your-TV-Launcher." width="800"></a>
+  <a href="docs/PRESS.md"><img src="docs/card.jpg" alt="359 TV-Modelle · 97 Marken · 30 Sprachen · Launcher mit 532 KB. Erwähnt in TechCrunch, TechRadar, Tom's Guide, Mashable, Android Authority, XDA, FlatpanelsHD, It's FOSS, Phandroid, GIGAZINE, Xataka, WinFuture, Frandroid, Macitynet, Techaeris, TechPP und 298 weitere: 314 Artikel aus 44 Ländern. Vorher: der Google-TV-Startbildschirm mit einer bezahlten Anzeige. Nachher: der Clean-Your-TV-Launcher." width="800"></a>
 </p>
 
 ## Einstieg
@@ -128,20 +128,20 @@ meisten Listen, jede mit ihren Modellen auf der Website verlinkt:
 
 | | | | | | |
 |---|---|---|---|---|---|
-| [TCL](https://cleanyour.tv/tvs?q=TCL) · 76 | [Sony](https://cleanyour.tv/tvs?q=Sony) · 40 | [Xiaomi](https://cleanyour.tv/tvs?q=Xiaomi) · 32 | [Philips](https://cleanyour.tv/tvs?q=Philips) · 18 | [Skyworth](https://cleanyour.tv/tvs?q=Skyworth) · 14 | [Hisense](https://cleanyour.tv/tvs?q=Hisense) · 11 |
-| [Amazon Fire TV](https://cleanyour.tv/tvs?q=Amazon%20Fire%20TV) · 7 | [Panasonic](https://cleanyour.tv/tvs?q=Panasonic) · 6 | [BenQ](https://cleanyour.tv/tvs?q=BenQ) · 5 | [SHARP](https://cleanyour.tv/tvs?q=SHARP) · 5 | [JVC](https://cleanyour.tv/tvs?q=JVC) · 4 | [OnePlus](https://cleanyour.tv/tvs?q=OnePlus) · 4 |
+| [TCL](https://cleanyour.tv/tvs?q=TCL) · 77 | [Sony](https://cleanyour.tv/tvs?q=Sony) · 41 | [Xiaomi](https://cleanyour.tv/tvs?q=Xiaomi) · 34 | [Philips](https://cleanyour.tv/tvs?q=Philips) · 19 | [Skyworth](https://cleanyour.tv/tvs?q=Skyworth) · 15 | [Hisense](https://cleanyour.tv/tvs?q=Hisense) · 11 |
+| [Amazon Fire TV](https://cleanyour.tv/tvs?q=Amazon%20Fire%20TV) · 7 | [SHARP](https://cleanyour.tv/tvs?q=SHARP) · 7 | [Panasonic](https://cleanyour.tv/tvs?q=Panasonic) · 6 | [BenQ](https://cleanyour.tv/tvs?q=BenQ) · 5 | [JVC](https://cleanyour.tv/tvs?q=JVC) · 4 | [OnePlus](https://cleanyour.tv/tvs?q=OnePlus) · 4 |
 | [Thomson](https://cleanyour.tv/tvs?q=Thomson) · 4 | [Google](https://cleanyour.tv/tvs?q=Google) · 3 | [Grundig](https://cleanyour.tv/tvs?q=Grundig) · 3 | [Haier](https://cleanyour.tv/tvs?q=Haier) · 3 | [Motorola](https://cleanyour.tv/tvs?q=Motorola) · 3 | [NVIDIA Shield](https://cleanyour.tv/tvs?q=NVIDIA%20Shield) · 3 |
 | [RCA](https://cleanyour.tv/tvs?q=RCA) · 3 | [Redmi](https://cleanyour.tv/tvs?q=Redmi) · 3 | [Toshiba](https://cleanyour.tv/tvs?q=Toshiba) · 3 | [Vu](https://cleanyour.tv/tvs?q=Vu) · 3 | [CHiQ](https://cleanyour.tv/tvs?q=CHiQ) · 2 | [EKO](https://cleanyour.tv/tvs?q=EKO) · 2 |
 | [FFalcon](https://cleanyour.tv/tvs?q=FFalcon) · 2 | [Hitachi](https://cleanyour.tv/tvs?q=Hitachi) · 2 | [Insignia Fire TV](https://cleanyour.tv/tvs?q=Insignia%20Fire%20TV) · 2 | [Kalley](https://cleanyour.tv/tvs?q=Kalley) · 2 | [Kogan](https://cleanyour.tv/tvs?q=Kogan) · 2 | [Nokia](https://cleanyour.tv/tvs?q=Nokia) · 2 |
 
 <details>
-<summary>+49 more brands and 14 projector brands</summary>
+<summary>+53 more brands and 14 projector brands</summary>
 
 **onn** 2 · **RockTek** 2 · **Sankey** 2 · **Sber** 2 · **Vidda** 2 ·
 Acer · AiPro2K · AIWA · AQUA · Artel · ASUS · Beko · BGH · Caxium · Cecotec · Challenger · Compac · Dcolor · Dialog ·
-DYON · Freebox · Home+ · INCLO · Karbonn · KTC · Liberton · Lumio · Master-G · MTC · Next · Noblex · OK. · OPPO ·
-Panavox · PEAQ · Polytron · PPTV · PRISM+ · SANYO · Seleco · Super General · Síragon · Tele System · TiVo · Tornado ·
-Turkcell · Tuvio · Verizon · Vision ·
+DYON · Freebox · Home+ · Impex · INCLO · Karbonn · Koryo · KTC · Liberton · Lumio · Master-G · MECOOL · MTC · Next ·
+Noblex · OK. · OPPO · Panavox · PEAQ · Polytron · PPTV · PRISM+ · Prosonic · SANYO · Seleco · Super General · Síragon ·
+Tele System · TiVo · Tornado · Turkcell · Tuvio · Verizon · Vision ·
 Alwtniet, Anker Nebula, BYINTEK, Epson, Formovie, Gadnic, HOTACK, HY320, JMGO, Magcubic, Portronics, Stellamore, Wanbo and XGIMI projectors
 
 </details>
@@ -257,7 +257,7 @@ Gerät übrig bleibt, steht in der [Fehlerbehebung](docs/TROUBLESHOOTING.md).
 | **Einrichten** | Dock-Reihenfolge, versteckte Apps, Live-TV-App, 4 bis 7 Kacheln je Zeile, reduzierte Bewegung. Alles in [`config.xml`](launcher/app/src/main/res/values/config.xml) |
 | **Einstellungen am Fernseher** | OK auf Einstellungen halten für die Launcher-Einstellungen. Ein optionales `launcher_settings_button` lässt einen normalen Klick sie direkt öffnen; die TV-Einstellungen bleiben auf der Einstellungsseite und ihrer App-Kachel. |
 | **Themes** | Hintergrund, Wallpaper und Layout aus einer `config.json`, über WLAN aufgespielt, ohne neuen Build. Zehn liegen in [`themes/`](themes/), das eingebaute `default/` mitgerechnet |
-| **29 Sprachen** | Folgt der Sprache des Fernsehers, mit vollständig gespiegeltem Layout von rechts nach links für Hebräisch |
+| **30 Sprachen** | Folgt der Sprache des Fernsehers, mit vollständig gespiegeltem Layout von rechts nach links für Hebräisch |
 | **App-Bibliothek** | Optional: jede installierte App durchsehen und Home-Verknüpfungen hinzufügen oder entfernen. Siehe [die Anleitung zur App-Bibliothek](docs/app-library.md) |
 | **Kachelmenü** | Optional (`tile_menu`): OK auf einer Kachel halten für Verschieben, Von Home entfernen und App-Info. Aus: OK halten öffnet App-Info |
 | **Modul-Karten** | Jede TV-App kann eine eigene Kachel anbieten; du stimmst jeder einmal zu. Siehe [`docs/modules.md`](docs/modules.md) |

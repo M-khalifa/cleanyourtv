@@ -21,6 +21,7 @@ refused (copy a theme first), and a `config.json` it cannot read is named before
 |---|---|---|
 | `default/` | The built-in look written out as JSON, as a starting point for your own | <img src="default/screenshot.jpg" width="320" alt="default theme"> |
 | `aurora/` | A dark aurora wallpaper (teal and violet on navy, darker at the bottom) with a matching background colour | <img src="aurora/screenshot.jpg" width="320" alt="aurora theme"> |
+| `cinematic/` | OLED and cinema look: true-colour wallpaper, a 6-column frosted-glass dock, no ambient glow and the idle clock after two minutes | <img src="cinematic/screenshot.jpg" width="320" alt="cinematic theme"> |
 | `dussehra/` | Festive skin for Dussehra (ends 21 Oct 2026): a marigold toran, a faint gold rangoli, a diya for Wi-Fi, a bell for Inputs, a marigold for Settings and a petal shower | <img src="dussehra/screenshot.jpg" width="320" alt="dussehra theme"> |
 | `glass/` | Dark navy wallpaper with soft teal and violet light, the cinematic top shelf, a frosted-glass dock, icon-only buttons and the focus glow in the app's colour, gliding without overshoot | <img src="glass/screenshot.jpg" width="320" alt="glass theme"> |
 | `nature-calm/` | Twelve calm nature photos from Wikimedia Commons (misty karst and forest, autumn lakes, spring bluebells, winter frost, mossy woods, a rainforest lake, waterfalls), a new one every five minutes in random order with its place and photographer under the buttons; six small tiles in a frosted-glass dock, round icon-only buttons, no hero name. The photos are CC BY / CC BY-SA, not MIT: see `nature-calm/CREDITS.md` | <img src="nature-calm/screenshot.jpg" width="320" alt="nature-calm theme"> |
@@ -47,7 +48,7 @@ A new key needs one there in the same pull request.
 | `fill_dock` | bool | Fill the dock slots `dock_apps` leaves free with the first grid apps (true by default); false leaves them empty |
 | `hidden_apps` | list of package names | Never shown as tiles |
 | `live_tv_package`, `live_tv_action` | string | The Live TV app and, if it has no leanback entry, the action to start it with |
-| `live_tv_input_id` | string | Exact system tuner for the Inputs menu's Live TV row; opens its channel collection. Empty keeps automatic selection. Missing input or unsupported collection falls back to the app's normal launch. [HAAM satellite example](../docs/devices/haam-r4.md) |
+| `live_tv_input_id` | string | Live TV source for the Inputs menu: an exact system tuner ID opens its channel collection. The special value `content://android.media.tv/channel` opens the stock launcher's root channel URI on Xiaomi MiTV-MSSP1 (#1941). Empty keeps automatic selection. Missing input or unsupported collection falls back to the app's normal launch. [HAAM satellite example](../docs/devices/haam-r4.md) |
 | `source_panel_service`, `source_panel_action` | string | The TV's own source panel, for sets with no TvInputManager: a service, or an activity (BYINTEK U4). Without a Live TV app, the Inputs pill opens it directly |
 | `source_panel_extra` | `"name=value"` | One int extra sent with the source panel (Coocaa OS: `control_center_command=100`) |
 | `coocaa_sources` | bool | Coocaa OS (Skyworth, China): list the sources from `com.skyworth.tv` in the Inputs menu, ahead of the source panel |
@@ -65,7 +66,7 @@ A new key needs one there in the same pull request.
 | `show_network_pill` | bool | The Wi-Fi/Ethernet pill in the top bar (`true` by default); `false` hides it |
 | `top_bar_apps` | list of package names | Apps shown as round buttons with their own logo in the top bar, left of the network pill; they leave the grid |
 | `show_inputs_pill` | bool | The Inputs pill in the top bar, shown when the TV has inputs (`true` by default); `false` hides it, and with `top_menu` it also leaves Inputs out of the gear's menu (streamers with no HDMI input, such as the Chromecast with Google TV); what the remote's Input button does is unchanged |
-| `icon_only_buttons` | bool | Wi-Fi and Settings as round icon buttons; Inputs keeps its label (`false` by default) |
+| `icon_only_buttons` | bool | Wi-Fi and Settings as round icon buttons; Inputs keeps its label. The VPN badge is drawn in the Wi-Fi pill's label, so with `wifi_label_width` at 0 it goes with the label: add `vpn_pill` to keep the VPN state on screen (`false` by default) |
 | `icon_only_inputs` | bool | The Inputs pill as a round icon button too, its label kept as the TalkBack description (`false` by default). Works with or without `icon_only_buttons` |
 | `top_menu` | bool | Inputs, Wi-Fi and Settings folded into one round gear, centred on the header: OK drops a menu with the three plus Reorder apps, hold OK keeps the launcher menu (`false` by default) |
 | `launcher_settings_button` | bool | Make the header Settings action open Launcher settings directly with a matching 22dp home icon; also changes the Settings row when `top_menu` is on. Hold OK keeps module-card and ordering tools. The settings page includes Reorder apps and TV settings (`false` by default) |

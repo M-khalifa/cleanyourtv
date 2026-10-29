@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
@@ -156,5 +157,28 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="On-screen countdown to the next prayer time, drawn over other apps" />
         </service>
+
+        <!-- The alert card of the reminders switch (off by default, config.xml reminders). -->
+        <activity
+            android:name=".PrayerAlertActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.Dialog.NoActionBar"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
+
+        <receiver android:name=".PrayerReceiver" android:exported="false" />
+
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="@bool/reminders"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
     </application>
 </manifest>

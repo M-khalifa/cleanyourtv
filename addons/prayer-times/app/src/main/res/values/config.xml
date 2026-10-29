@@ -6,7 +6,7 @@
     <string name="longitude" translatable="false"></string>
     <string name="place" translatable="false"></string>
     <!-- Aladhan's calculation method (https://aladhan.com/calculation-methods), e.g. 2 ISNA, 3 Muslim World
-         League, 4 Umm al-Qura, 5 Egyptian, 13 Turkey, 21 Morocco. -->
+         League, 4 Umm al-Qura, 5 Egyptian, 13 Turkey, 20 Indonesia (Kemenag), 21 Morocco. -->
     <string name="method" translatable="false">21</string>
     <color name="accent">#2BB673</color>
     <!-- A silent banner over whatever is playing, alert_lead_minutes before each prayer and at it (PrayerAlerts).
@@ -54,4 +54,6 @@
     <!-- The Hijri date next to the countdown on the Clean Your TV Home card (read from this add-on's provider). -->
     <bool name="card_hijri">true</bool>
 
+    <!-- Show an on-screen alert card when a prayer time arrives. Off by default. -->
+    <bool name="reminders">false</bool>
 </resources>

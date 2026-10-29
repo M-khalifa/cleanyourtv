@@ -11,6 +11,12 @@ TRANSLATIONS is now {page: the three words that page states its counts in}, so a
 its own numbers moved with its grid, and this file reads the mapping: each page it names must state those
 three words in its card's alt text, one triple, and must be what render() gives back for it.
 
+The mapping is also the whole list of pages the script writes, so a translation cannot copy the brand block
+by hand and be left out of it: README.de.md did exactly that when the German page landed, and its grid said
+"Xiaomi · 32" and "+49 more brands" over 97 brands while README.md said 34 and +53 - the block's own header
+says it is generated, and no run touched it. One test here walks the checkout for the markers and holds
+every page that carries them to being written.
+
 Run from the repository root: python3 -m unittest discover -s tests -v
 """
 import re
@@ -58,12 +64,32 @@ oude merkregel
 
 LISTS = [("acme-a", tv("Acme A", "Acme")), ("acme-b", tv("Acme B", "Acme")), ("bolt-c", tv("Bolt C", "Bolt"))]
 
+# The German page's card, as README.de.md has it: the same three counts in German, then the launcher's size,
+# which is not one of them and does not move. No short TV table - that page has the brand block only.
+DE = f"""# Titel
 
-def checkout(tmp, dutch=NL):
-    """The fake checkout test_gen_tables.py builds, with a README.nl.md beside its README.md."""
+<a href="docs/PRESS.md"><img src="docs/card.jpg" alt="316 TV-Modelle · 89 Marken · 28 Sprachen · Launcher
+mit 523 KB. Erwähnt in TechCrunch." width="800"></a>
+
+Eine gewöhnliche deutsche Zeile, die nicht von diesem Generator stammt.
+
+| **28 Sprachen** | Folgt der Sprache des Fernsehers. |
+| **Themes** | Hintergrund und Aufteilung aus einer `config.json`. |
+
+{START.format("tv-brands")}
+
+alte Markenzeile
+
+{END.format("tv-brands")}
+"""
+
+
+def checkout(tmp, dutch: str | None = NL, german: str | None = DE):
+    """The fake checkout test_gen_tables.py builds, with the translated READMEs beside its README.md."""
     root = tree(tmp, LISTS)
-    if dutch is not None:
-        (root / "README.nl.md").write_text(dutch, encoding="utf-8")
+    for page, text in (("README.nl.md", dutch), ("README.de.md", german)):
+        if text is not None:
+            (root / page).write_text(text, encoding="utf-8")
     return root
 
 
@@ -146,6 +172,44 @@ class TranslatedCountsTest(unittest.TestCase):
             root = checkout(tmp, dutch=None)
             self.assertNotIn("README.nl.md", self.render(root))
 
+    def test_each_translated_page_states_the_numbers_in_its_own_words(self):
+        # Two pages in the mapping, two sets of words: the Dutch one must not take the German words or the
+        # other way round, which is what one shared triple would do.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = checkout(tmp)
+            rendered = self.render(root)
+        self.assertIn("3 tv-modellen · 2 merken · 3 talen · ", rendered["README.nl.md"])
+        self.assertIn("| **3 talen** |", rendered["README.nl.md"])
+        self.assertIn("3 TV-Modelle · 2 Marken · 3 Sprachen · ", rendered["README.de.md"])
+        self.assertIn("| **3 Sprachen** |", rendered["README.de.md"])
+        self.assertNotIn("Marken", rendered["README.nl.md"])
+        self.assertNotIn("merken", rendered["README.de.md"])
+
+    def test_the_german_page_keeps_what_the_generator_does_not_own(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = checkout(tmp)
+            german = self.render(root)["README.de.md"]
+        self.assertIn("Launcher\nmit 523 KB", german)
+        self.assertIn("Eine gewöhnliche deutsche Zeile, die nicht von diesem Generator stammt.", german)
+        self.assertIn("| **Themes** | Hintergrund und Aufteilung aus einer `config.json`. |", german)
+
+    def test_a_README_de_that_is_not_there_is_not_written(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = checkout(tmp, german=None)
+            rendered = self.render(root)
+        self.assertNotIn("README.de.md", rendered)
+        self.assertIn("README.nl.md", rendered)
+
+    def test_both_translated_pages_get_the_brand_block_beside_their_counts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = checkout(tmp)
+            rendered = self.render(root)
+        for page in ("README.nl.md", "README.de.md"):
+            with self.subTest(page=page):
+                block = section(rendered[page], "tv-brands")
+                self.assertIn("[Acme](https://cleanyour.tv/tvs?q=Acme) · 2", " ".join(block))
+                self.assertNotIn("alte Markenzeile", block)
+
     def test_the_brand_block_is_written_beside_the_counts(self):
         # The point of moving the numbers: the grid under them is generated from every tv.json.
         with tempfile.TemporaryDirectory() as tmp:
@@ -187,6 +251,23 @@ class ThisRepositoryTest(unittest.TestCase):
         for page in gen_tables.TRANSLATIONS:
             with self.subTest(page=page):
                 self.assertEqual((ROOT / page).read_text(encoding="utf-8"), rendered[page])
+
+    def test_every_page_that_carries_the_brand_block_is_written(self):
+        # The block's header says it is generated, so a page that carries it has to be in the list this
+        # script writes: README.de.md copied it by hand and was left out, and its grid said "Xiaomi · 32"
+        # and "+49 more brands" over 97 brands. A translation that copies the block next is held here.
+        pages, marker = [], "<!-- tv-brands:start"
+        for path in sorted(ROOT.glob("README*.md")):
+            if marker in path.read_text(encoding="utf-8"):
+                pages.append(path.name)
+        self.assertLessEqual({"README.md", "README.nl.md", "README.de.md"}, set(pages),
+                             f"the brand block's marker was not found where this test expects it: {pages}")
+        written = set(gen_tables.OWNED) | set(gen_tables.TRANSLATIONS)
+        for page in pages:
+            with self.subTest(page=page):
+                self.assertIn(page, written,
+                              f"{page} carries the brand block but tools/gen_tables.py never rewrites it: "
+                              f"add it to TRANSLATIONS with the three words its counts are stated in")
 
     def test_the_walk_reads_this_checkout(self):
         entries = gen_tables.load(ROOT)

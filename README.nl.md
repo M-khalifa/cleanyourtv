@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/PRESS.md"><img src="docs/card.jpg" alt="355 tv-modellen · 97 merken · 29 talen · launcher van 523 KB. Genoemd in TechCrunch, TechRadar, Tom's Guide, Mashable, Android Authority, XDA, FlatpanelsHD, It's FOSS, Phandroid, GIGAZINE, Xataka, WinFuture, Frandroid, Macitynet, Techaeris, TechPP en nog 298 media: 314 artikelen uit 44 landen. Voorheen: het standaard Google TV-startscherm met een gesponsorde advertentie. Daarna: de Clean Your TV-launcher." width="800"></a>
+  <a href="docs/PRESS.md"><img src="docs/card.jpg" alt="359 tv-modellen · 97 merken · 30 talen · launcher van 523 KB. Genoemd in TechCrunch, TechRadar, Tom's Guide, Mashable, Android Authority, XDA, FlatpanelsHD, It's FOSS, Phandroid, GIGAZINE, Xataka, WinFuture, Frandroid, Macitynet, Techaeris, TechPP en nog 298 media: 314 artikelen uit 44 landen. Voorheen: het standaard Google TV-startscherm met een gesponsorde advertentie. Daarna: de Clean Your TV-launcher." width="800"></a>
 </p>
 
 **De virale tweet:** [x.com/gathint/status/2111379569030939102](https://x.com/gathint/status/2111379569030939102)
@@ -121,8 +121,8 @@ Tested lists from contributors, one folder per model in [`examples/`](examples/)
 
 | | | | | | |
 |---|---|---|---|---|---|
-| [TCL](https://cleanyour.tv/tvs?q=TCL) · 76 | [Sony](https://cleanyour.tv/tvs?q=Sony) · 40 | [Xiaomi](https://cleanyour.tv/tvs?q=Xiaomi) · 34 | [Philips](https://cleanyour.tv/tvs?q=Philips) · 18 | [Skyworth](https://cleanyour.tv/tvs?q=Skyworth) · 15 | [Hisense](https://cleanyour.tv/tvs?q=Hisense) · 11 |
-| [Amazon Fire TV](https://cleanyour.tv/tvs?q=Amazon%20Fire%20TV) · 7 | [Panasonic](https://cleanyour.tv/tvs?q=Panasonic) · 6 | [SHARP](https://cleanyour.tv/tvs?q=SHARP) · 6 | [BenQ](https://cleanyour.tv/tvs?q=BenQ) · 5 | [JVC](https://cleanyour.tv/tvs?q=JVC) · 4 | [OnePlus](https://cleanyour.tv/tvs?q=OnePlus) · 4 |
+| [TCL](https://cleanyour.tv/tvs?q=TCL) · 77 | [Sony](https://cleanyour.tv/tvs?q=Sony) · 41 | [Xiaomi](https://cleanyour.tv/tvs?q=Xiaomi) · 34 | [Philips](https://cleanyour.tv/tvs?q=Philips) · 19 | [Skyworth](https://cleanyour.tv/tvs?q=Skyworth) · 15 | [Hisense](https://cleanyour.tv/tvs?q=Hisense) · 11 |
+| [Amazon Fire TV](https://cleanyour.tv/tvs?q=Amazon%20Fire%20TV) · 7 | [SHARP](https://cleanyour.tv/tvs?q=SHARP) · 7 | [Panasonic](https://cleanyour.tv/tvs?q=Panasonic) · 6 | [BenQ](https://cleanyour.tv/tvs?q=BenQ) · 5 | [JVC](https://cleanyour.tv/tvs?q=JVC) · 4 | [OnePlus](https://cleanyour.tv/tvs?q=OnePlus) · 4 |
 | [Thomson](https://cleanyour.tv/tvs?q=Thomson) · 4 | [Google](https://cleanyour.tv/tvs?q=Google) · 3 | [Grundig](https://cleanyour.tv/tvs?q=Grundig) · 3 | [Haier](https://cleanyour.tv/tvs?q=Haier) · 3 | [Motorola](https://cleanyour.tv/tvs?q=Motorola) · 3 | [NVIDIA Shield](https://cleanyour.tv/tvs?q=NVIDIA%20Shield) · 3 |
 | [RCA](https://cleanyour.tv/tvs?q=RCA) · 3 | [Redmi](https://cleanyour.tv/tvs?q=Redmi) · 3 | [Toshiba](https://cleanyour.tv/tvs?q=Toshiba) · 3 | [Vu](https://cleanyour.tv/tvs?q=Vu) · 3 | [CHiQ](https://cleanyour.tv/tvs?q=CHiQ) · 2 | [EKO](https://cleanyour.tv/tvs?q=EKO) · 2 |
 | [FFalcon](https://cleanyour.tv/tvs?q=FFalcon) · 2 | [Hitachi](https://cleanyour.tv/tvs?q=Hitachi) · 2 | [Insignia Fire TV](https://cleanyour.tv/tvs?q=Insignia%20Fire%20TV) · 2 | [Kalley](https://cleanyour.tv/tvs?q=Kalley) · 2 | [Kogan](https://cleanyour.tv/tvs?q=Kogan) · 2 | [Nokia](https://cleanyour.tv/tvs?q=Nokia) · 2 |
@@ -211,7 +211,7 @@ Alwtniet, Anker Nebula, BYINTEK, Epson, Formovie, Gadnic, HOTACK, HY320, JMGO, M
 | Hisense HiSmartTV A4 (xiaoyushan, MStar m7322), India | Android TV 9 |
 | Hisense SmartTV 4K FFM (huangshan, MediaTek), Latin America; also the US Hisense U9DG | Android TV 10 |
 | Hisense SmartTV 4K FFM (lushan, MediaTek MT9676), Mongolia | Google TV 12 |
-| Hisense SmartTV 4K FFM (songshan, MediaTek m7632); also the US Hisense 50A6H4 | Android 11 (SDK 30) |
+| Hisense SmartTV 4K FFM (songshan, MediaTek m7632); also the US Hisense 50A6H4 and 65U6G | Android 11 (SDK 30) |
 | Hisense U75 / 75U75N / 65U7ESG (hengshan, MediaTek), Latin America and US | Google TV 12 |
 | Hitachi 65QLEDSM20 (MTC, bangbae, MediaTek m7322), Australia | Android TV 11 |
 | Hitachi CDH-LE32SMART21 (TCL-built C06, C06_2K_GB, MediaTek MT9221, 1 GB), Argentina | Android TV 11 |
@@ -226,8 +226,8 @@ Alwtniet, Anker Nebula, BYINTEK, Epson, Formovie, Gadnic, HOTACK, HY320, JMGO, M
 | JMGO N1S projector (K80A, holan, MediaTek m7332), Australia | Google TV 14 |
 | JVC Android TV (Vestel-built, BARTU_Jvc, menlo, MediaTek mt5867), Spain | Android TV 11 |
 | JVC LT-43KM348 (KTC-built, KTC_JVC_2K_25GV1, jagalchi, MediaTek mt5867 / T56) | Google TV 14 |
+| JVC LT-58CA810 (UK 4K Android TV, MTC, MTCMSD6886UK, sadang, MediaTek m7322), UK | Android TV 11 |
 | JVC LT55MB508 (MTC, seocho, MediaTek MSD6886), Brazil | Android TV 11 |
-| JVC UK 4K Android TV (MTC, MTCMSD6886UK, sadang, MediaTek m7322), UK | Android TV 11 |
 | Kalley 43G200 (device R3_GTV, MOKA, Realtek RTD2841A), Latin America | Google TV 14 |
 | Kalley R10G (device R10G, product ACER_FFM, MOKA, Realtek RTD2875P), Latin America | Google TV 14 |
 | Karbonn / Motorola SWTV-20AE (Skyworth OEM, SW4H, MediaTek), India | Android TV 10 |
@@ -274,6 +274,7 @@ Alwtniet, Anker Nebula, BYINTEK, Epson, Formovie, Gadnic, HOTACK, HY320, JMGO, M
 | Philips 55OLED707/12 / 55OLED887/12 (TP Vision, PH1M_EA_9970A, MediaTek MT5895), UK and Poland | Android TV 11 |
 | Philips 55OLED708/12 (TPV, PH1M_WW_9972, MediaTek), Poland | Google TV 12 |
 | Philips 55OLED820/12 (TPV, PH1M_WW_9972, MediaTek), Czech Republic | Google TV 14 |
+| Philips 55POS9002/12 OLED (TP Vision TPM171E, PH7M_EU_5596, MediaTek MT5891), Europe | Android TV 8.0 |
 | Philips 55PUS7503/12 (TP Vision TPM171E, PH7M_EU_5596, MediaTek MT5891), Europe | Android TV 8.0 |
 | Philips 65OLED706/12 (TP Vision, PH1M_EA_9970A, MediaTek MT5895), France; 55OLED706/12, Poland | Android TV 11 |
 | Philips 65OLED907/12 and 55OLED907/12 (TP Vision, PH1M_EA_9970A, MediaTek MT5895), UK and France | Android TV 11 |
@@ -311,6 +312,7 @@ Alwtniet, Anker Nebula, BYINTEK, Epson, Formovie, Gadnic, HOTACK, HY320, JMGO, M
 | SHARP AQUOS 4T-C43DL1 (AQUOS-TVJ21-2, tcve2uj, MediaTek), Japan | Android TV 11 |
 | SHARP AQUOS TVE21F (AQUOS-TVE21F, banqiao, CVTE/MediaTek), UK | Android TV 14 |
 | SHARP AQUOS TVE23A (AQUOS-TVE23A, sandiego, CVTE/MediaTek mt5889), Denmark | Google TV 14 |
+| SHARP AQUOS-TVX19B (AQUOS-TVX19B, gangnam, MediaTek m7322), Taiwan | Android TV 11 |
 | Skyworth / Coocaa 8R40_K5C (Realtek rtd285x, 1 GB, 32-bit), China domestic firmware | Android 8.0 (not Google TV) |
 | Skyworth 43E6A (open_fhd, MediaTek MT5886) | Android TV 8.0 |
 | Skyworth 65A3F (7T641_A3F, MediaTek MT9633), China | Android 13 (CCOS 10.01.250328) |
@@ -329,15 +331,16 @@ Alwtniet, Anker Nebula, BYINTEK, Epson, Formovie, Gadnic, HOTACK, HY320, JMGO, M
 | Sony BRAVIA 4K GB (KD-75XE8596, XBR-49X705D; BRAVIA_ATV2_EU, BRAVIA_ATV2_BR) | Android TV 9 |
 | Sony BRAVIA 4K UR2 (BRAVIA_UR2_4K, MediaTek) | Android TV 10 |
 | Sony BRAVIA 4K UR3 / KD-55X8000H (BRAVIA_UR3, MediaTek mt5893), EU and TW | Android TV 10 |
-| Sony BRAVIA 4K VH1 (KD-55XH9096 / XBR-55X900H, BRAVIA_VH1, MediaTek MT5895), EU and US | Google TV 12 |
+| Sony BRAVIA 4K VH1 (KD-55XH9096 / KD-65XH9296 / XBR-55X900H, BRAVIA_VH1, MediaTek MT5895), EU, UK and US | Google TV 12 |
 | Sony BRAVIA 4K VH2 (KD-55X80J / XR-65A83J, BRAVIA_VH2, MediaTek), EU, North America and India | Google TV 12 |
-| Sony BRAVIA 4K VH21 (KD-65X85K, 2022, BRAVIA_VH21, MediaTek MT5895), Australia | Google TV 12 |
+| Sony BRAVIA 4K VH21 (KD-65X85K, 2022, BRAVIA_VH21, MediaTek MT5895), Australia & India | Google TV 12 |
 | Sony BRAVIA 4K VH21 (XR-55A80K, 2022, BRAVIA_VH21, MediaTek mt5895), EU | Google TV 12 |
 | Sony BRAVIA 4K VH21 (XR-65A95K, 2022, BRAVIA_VH21, MediaTek), US | Google TV 12 |
 | Sony BRAVIA 9 II (K-65XR90M2, BRAVIA_AE3, MediaTek MT5838) | Google TV 14 |
 | Sony BRAVIA BF1 (BRAVIA 2 II class, BRAVIA_BF1_4K_A, MediaTek) | Google TV 12 |
 | Sony BRAVIA KD-43X8000G (2019, BRAVIA_ATV3_4K, MediaTek), APAC | Android TV 9 |
 | Sony BRAVIA KD-43X80L (2023, BRAVIA_VH22, MediaTek MT5895), EU | Google TV 12 |
+| Sony BRAVIA KD-49X8000G (2019, BRAVIA_ATV3_4K, MediaTek), Hong Kong | Android TV 9 |
 | Sony BRAVIA KD-49X8307C (2015, "BRAVIA 4K 2015", SVP-DTV15, MediaTek), EU firmware | Android TV 7.0 |
 | Sony BRAVIA KD-55X75K (BRAVIA_VU3_4K, Realtek rtd2885m) | Google TV 14 |
 | Sony BRAVIA KD-55X8000C (2015, "BRAVIA 4K 2015", SVP-DTV15, MediaTek), China firmware | Android TV 7.0 |
@@ -390,13 +393,14 @@ Alwtniet, Anker Nebula, BYINTEK, Epson, Formovie, Gadnic, HOTACK, HY320, JMGO, M
 | TCL 50J7000A (Thailand, BeyondTV, Realtek RT2851 / rtd285o, AR04, V8-R851T02-LF1V674) | Android TV 11 |
 | TCL 50P615 (Greece and Türkiye, BeyondTV, Realtek RTD2851 / rtd285o, AR05) | Android TV 11 |
 | TCL 50P735 (BeyondTV4, Smart TV Pro) | Google TV 11 |
-| TCL 55" 4K Google TV, 2023 (G10, G10_4K_US_NF); also TCL 55P6K, Spain and TCL 43P69K, Netherlands (G10_4K_GB_NF_32BIT) | Google TV 12 |
+| TCL 55" 4K Google TV, 2023 (G10, G10_4K_US_NF); also TCL 55P6K, Spain and TCL 43P69K, Netherlands (G10_4K_GB_NF_32BIT); and TCL 55Q651G, US (G10_4K_US_NF); and TCL 55Q6CS, India (G10_4K_GB) | Google TV 12 |
 | TCL 55A300W picture-frame TV (2023, G08, G08_4K_US_NF, MediaTek MT9653), US | Google TV 12 |
 | TCL 55C715 QLED (Europe, BeyondTV2, Realtek RTD2851, V8-R851T02-LF1V606); also TCL 55C718 (Finland, same build) | Android TV 9 |
 | TCL 55C725 (Smart TV Pro, BeyondTV4, G03_4K_GB, Realtek R51MT05, V8-R51MT05-LF1V620), Italy; also TCL 65C655 Pro (same build) | Google TV launcher on Android TV 11 |
 | TCL 55C745, 2023 (G08, G08_4K_GB, MediaTek tcl9618) | Google TV 14 |
 | TCL 55C7K QD-Mini LED, 2025, UK (G08, MediaTek tcl9618) | Google TV 14 |
 | TCL 55C815 (2020, Europe/Denmark, BeyondTV2, Realtek rtd285o) | Android TV 11 |
+| TCL 55C845X2 / 75C845X2, UK/Europe (G08_4K_GB, MediaTek tcl9618) | Google TV 14 |
 | TCL 55EP640 (Greece, BeyondTV, Realtek RTD2851 / rtd285o, AR04) | Android TV 11 |
 | TCL 55P638 (Smart TV, BeyondTV4) | Android TV 11 |
 | TCL 55P7K, Middle East (G10, G10_4K_GB, Realtek RTD2875P) | Google TV 12 |
@@ -414,11 +418,11 @@ Alwtniet, Anker Nebula, BYINTEK, Epson, Formovie, Gadnic, HOTACK, HY320, JMGO, M
 | TCL 65C8L (Smart TV Pro, G17, G17_4K_GB, MediaTek tcl9655), 2025, Australia | Google TV 14 |
 | TCL 65EP640 (Finland, BeyondTV, Realtek RTD2851 / rtd285o, AP06) | Android TV 9 |
 | TCL 65EP68 (Europe, BeyondTV, Realtek RTD2851 / rtd285o, V8-R851T02-LF1V722) | Android TV 11 |
+| TCL 65P615 (Europe, BeyondTV, Realtek RTD2851, AP06, V8-R851T02-LF1V637) | Android TV 9 |
 | TCL 65Q550G (TCL Smart TV, Google TV 11, V8-R51MT08-LF1V095.021344) | Google TV |
 | TCL 65Q650G (US Q6 2023, BeyondTV4, Realtek RTD2851 / R51MT08, V8-R51MT08-LF1V095, 2 GB) | Google TV 11 |
 | TCL 65QM8L (Smart TV Pro, G17, G17_4K_US, MediaTek tcl9655), 2025, US | Google TV 14 |
 | TCL 65X10 QLED (France, BeyondTV2, Realtek RTD2851, V8-R851T02-LF1V363) | Android TV 9 |
-| TCL 75C845X2, UK/Europe (G08_4K_GB, MediaTek tcl9618) | Google TV 14 |
 | TCL 75P635 (Smart TV, BeyondTV4, G07), AR07 build | Android TV 11 |
 | TCL 75P8K, Europe / Nordics (G10, G10_4K_GB / C6KS, Realtek RTD2875P / rtd6748) | Google TV 12 |
 | TCL 75T7 / 55Q77K (Smart TV Pro, G08, G08_4K_US, MediaTek tcl9618), US firmware | Google TV 14 |
@@ -436,7 +440,7 @@ Alwtniet, Anker Nebula, BYINTEK, Epson, Formovie, Gadnic, HOTACK, HY320, JMGO, M
 | TCL Q7C (Smart TV Pro, G08, G08_4K_GB, MediaTek tcl9618), European firmware | Google TV 14 |
 | TCL QM6K Pro, 2025 (G08, MediaTek tcl9618) | Google TV 14 |
 | TCL Smart TV (G07, G07_4K_GB_NF, Realtek RTD2851A, 2 GB) | Google TV 11 |
-| TCL Smart TV Pro (G03, G03_4K_GB / G03_4K_US, BeyondTV4, Realtek R51MT05, V8-R51MT05-LF1V620 / LF1V813), Middle East and US firmware | Google TV 11 |
+| TCL Smart TV Pro (G03, G03_4K_GB / G03_4K_US, BeyondTV4, Realtek R51MT05, V8-R51MT05-LF1V620 / LF1V652 / LF1V813), Middle East, EU (TCL 50C641), US and Latin America firmware | Google TV 11 |
 | TCL Smart TV Pro (G05, G05_4K_US, MediaTek MT5889); also TCL 55Q750G | Google TV 11 |
 | TCL Smart TV Pro (G08, G08_4K_GB, MediaTek), Australian firmware | Google TV 12 |
 | TCL Smart TV Pro (G08, G08_4K_GB, MediaTek), Europe/UK firmware | Android TV 12 |
@@ -603,7 +607,7 @@ De **tv** moet Android 8.0 (API 26) of nieuwer gebruiken. `minSdk` stelt de mini
 | **Configuratie** | Volgorde van het dock, verborgen apps, Live-tv-app, 4 tot 7 tegels per rij en minder beweging. Alles staat in [`config.xml`](launcher/app/src/main/res/values/config.xml). |
 | **Instellingen op de tv** | Houd OK ingedrukt op Instellingen om de launcherinstellingen te openen. Met de optionele instelling `launcher_settings_button` opent een gewone klik ze direct; de tv-instellingen blijven beschikbaar via de instellingenpagina en de tegel van die app. |
 | **Thema's** | Achtergrond, wallpaper en indeling komen uit een via wifi verzonden `config.json`; opnieuw bouwen is niet nodig. In [`themes/`](themes/) staan tien thema's, inclusief het ingebouwde `default/`. |
-| **29 talen** | Volgt de taal van de tv, met een volledig gespiegeld rechts-naar-links ontwerp voor Hebreeuws. |
+| **30 talen** | Volgt de taal van de tv, met een volledig gespiegeld rechts-naar-links ontwerp voor Hebreeuws. |
 | **Appbibliotheek** | Optioneel: bekijk alle geïnstalleerde apps en voeg snelkoppelingen op het startscherm toe of verwijder ze. Zie [de handleiding voor de appbibliotheek](docs/app-library.md). |
 | **Tegelmenu** | Optioneel (`tile_menu`): houd OK ingedrukt op een tegel voor Verplaatsen, Verwijderen van startscherm en App-info. Staat dit uit, dan opent lang indrukken de app-info. |
 | **Modulekaarten** | Elke tv-app kan een eigen tegel aanbieden; je keurt elke app één keer goed. Zie [`docs/modules.md`](docs/modules.md). |

@@ -13,9 +13,12 @@ countdown to it, plus today's Gregorian and Hijri dates. Each prayer has its Ara
   standard or Hanafi; and each reminder below, **all off until switched on**. Only what you change is stored;
   `app/src/main/res/values/config.xml` holds the defaults for a build (leave its location empty and its reminders
   false for a build anyone may install).
+- **Reminders switch** (`reminders` in `app/src/main/res/values/config.xml`, off by default): a small
+  alert card at the top right when a prayer time arrives, with one notification chime; it closes after
+  10 seconds or on any key. It is separate from the reminders below and needs no adb setup.
 - It reads Aladhan when the page opens and again after midnight. The countdown updates every minute.
   Offline, the last times stay on screen.
-- 24-hour times, English words.
+- 24-hour times, localized prayer names and strings for English, Indonesian (`values-in`), and Arabic (`values-ar`).
 
 ## Alerts, Azan and recitations
 
@@ -82,6 +85,7 @@ which cancels them.
 | `SYSTEM_ALERT_WINDOW` | The pill, banner and Azan window over other apps; also what lets an alarm open a screen at once. |
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | The pill and the Azan while another app is on screen. They run only while one is showing or playing. |
 | `WRITE_SECURE_SETTINGS` (ADB only) | Switching `SleepService` back on, nothing else. |
+| `WAKE_LOCK` | The `reminders` switch: briefly wakes the screen for its alert card. |
 
 What is sent: the date, the chosen city's latitude and longitude, the method and the Asr school to Aladhan; the
 name you type in the city search to [Open-Meteo's geocoding](https://open-meteo.com/en/docs/geocoding-api); and a
@@ -105,6 +109,20 @@ TV_HOST=<tv ip> ../../tools/venv/bin/python -I ../../tools/tv.py --push app/buil
 TV_HOST=<tv ip> ../../tools/venv/bin/python -I ../../tools/tv.py 'pm install -r /data/local/tmp/addon.apk; rm -f /data/local/tmp/addon.apk'
 ```
 
+If `reminders` is set to `true`, grant the overlay permission so the on-screen alert card can display over playing video and other apps:
+
+```bash
+TV_HOST=<tv ip> ../../tools/venv/bin/python -I ../../tools/tv.py 'appops set com.majnioui.tv.prayer SYSTEM_ALERT_WINDOW allow'
+```
+
+On Android 14+ (API 34), exact alarms are off by default. The add-on safely falls back to `setAndAllowWhileIdle`, or exact timing can be explicitly granted via:
+
+```bash
+TV_HOST=<tv ip> ../../tools/venv/bin/python -I ../../tools/tv.py 'appops set com.majnioui.tv.prayer SCHEDULE_EXACT_ALARM allow'
+```
+
+> **Note:** Force-stopping the app (`am force-stop com.majnioui.tv.prayer`) removes all pending alarms scheduled in Android's `AlarmManager`. When testing real alarms, do not force-stop the app.
+
 Press Home: the launcher asks once whether to show the card. Change the answer later by holding OK on
 Settings, then Module cards.
 
@@ -125,8 +143,8 @@ and no app can, so other apps cannot fire them. To see the early wake, let the d
 
 ## Tested on
 
-Xiaomi TV (MiTV-MOOR2), Google TV 11, RTM5.220609.003: the page, the countdown, the card prompt and the card
-shown in the launcher's dock.
+- Xiaomi TV (MiTV-MOOR2), Google TV 11, RTM5.220609.003: the page, the countdown, the card prompt and the card shown in the launcher's dock.
+- TCL 43A50 (Smart TV Pro), Android 11 (build RP1A.200622.001): background prayer alarms, top-right unobtrusive alert card over active apps and home screen, and auto-dismiss after 10 seconds.
 
 TCL Google TV (Android 12) in Network Standby: the Azan and the recitations waking the TV through the early wake on
 time, the volume set and restored, the recitation pausing for the Azan, back to standby at the end, and recovery
