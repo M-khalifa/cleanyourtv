@@ -791,7 +791,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
-                if (homeWidgets.getVisibility() != View.VISIBLE) return;
+                // Also while hidden, so a card that comes back sits where the grid is.
                 float offset = rv.computeVerticalScrollOffset();
                 homeWidgets.setTranslationY(-offset);
                 // A few pixels of settle after a rebuild do not count as scrolling away.
@@ -2898,7 +2898,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         try {
                             rows.put(s, liveIo.submit(() -> {
                                 try {
-                                    return HomeWidgets.live(resolver, pm, pkg, label);
+                                    // A read still queued when Home left the front is not started.
+                                    return resumed ? HomeWidgets.live(resolver, pm, pkg, label) : null;
                                 } finally {
                                     liveBusy.remove(pkg);
                                 }
@@ -2907,10 +2908,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                             liveBusy.remove(pkg);
                         }
                     }
-                    long until = System.currentTimeMillis() + HomeWidgets.LIVE_TIMEOUT_MS;
+                    long until = android.os.SystemClock.elapsedRealtime() + HomeWidgets.LIVE_TIMEOUT_MS;
                     for (Map.Entry<String, java.util.concurrent.Future<WidgetPages.Item>> e : rows.entrySet()) {
                         try {
-                            WidgetPages.Item item = e.getValue().get(Math.max(0, until - System.currentTimeMillis()),
+                            WidgetPages.Item item = e.getValue().get(Math.max(0, until - android.os.SystemClock.elapsedRealtime()),
                                     java.util.concurrent.TimeUnit.MILLISECONDS);
                             if (item != null) items.put(e.getKey(), item);
                         } catch (java.util.concurrent.TimeoutException t) {
@@ -2965,13 +2966,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
-    /** A launcher-owned icon by the page's kind; an add-on never supplies its own drawable. */
+    /** A launcher-owned icon: the built-in page's own, else by the add-on row's kind; an add-on never supplies one. */
     private static int widgetIcon(WidgetPages.Item item) {
+        if (WidgetPages.ADB.equals(item.source)) return R.drawable.ic_lock;
+        if (WidgetPages.MEMORY.equals(item.source)) return R.drawable.ic_memory;
         switch (item.kind) {
             case "news": return R.drawable.ic_news;
-            case WidgetPages.ADB:
             case "alert": return R.drawable.ic_lock;
-            case WidgetPages.MEMORY: return R.drawable.ic_memory;
             default: return R.drawable.ic_event;
         }
     }

@@ -94,7 +94,7 @@ public class WidgetPagesTest {
         assertNull(WidgetPages.adb(false, false));
         assertTrue(WidgetPages.adb(false, true).alert);
         assertTrue(WidgetPages.adb(true, false).meta.contains("Developer options"));
-        assertTrue(WidgetPages.adb(true, true).meta.contains("network"));
+        assertTrue(WidgetPages.adb(true, true).meta.contains("Paired"));
     }
 
     @Test

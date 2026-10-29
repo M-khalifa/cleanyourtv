@@ -116,7 +116,7 @@ final class WidgetPages {
     static Item adb(boolean debugging, boolean wirelessDebugging) {
         if (!debugging && !wirelessDebugging) return null;
         return new Item(ADB, "SECURITY", "Debugging is ON",
-                wirelessDebugging ? "Anyone on this network can control the TV"
+                wirelessDebugging ? "Paired computers can control the TV over Wi-Fi"
                         : "Turn it off in Developer options", true);
     }
 
