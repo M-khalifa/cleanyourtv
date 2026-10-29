@@ -95,6 +95,18 @@ public class PreWakeActivity extends Activity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        Handover.STATE.ownScreenShown(true);
+    }
+
+    @Override
+    protected void onStop() {
+        Handover.STATE.ownScreenShown(false);
+        super.onStop();
+    }
+
+    @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         at = getIntent().getLongExtra(EXTRA_AT, 0);

@@ -52,6 +52,7 @@ public class QuranActivity extends Activity {
         public void onReceive(Context c, Intent intent) {
             // Turned off with the remote: the recitation stops with the TV.
             EventLog.i(c, TAG, "TV turned off during the recitation");
+            playedOut = false;
             Handover.STATE.recitationKeyPressed();
             finish();
         }
@@ -75,6 +76,18 @@ public class QuranActivity extends Activity {
     /** Played to its end: the TV goes to standby after a warning even if it was on or a key was pressed. */
     private boolean playedOut;
     private boolean keyLogged;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Handover.STATE.ownScreenShown(true);
+    }
+
+    @Override
+    protected void onStop() {
+        Handover.STATE.ownScreenShown(false);
+        super.onStop();
+    }
 
     @Override
     protected void onCreate(Bundle state) {
@@ -205,6 +218,7 @@ public class QuranActivity extends Activity {
         if (change == AudioManager.AUDIOFOCUS_LOSS) {
             // Another app took the sound for good, also while loading or retrying: someone watches something else.
             EventLog.i(this, TAG, "another app took the sound: closed");
+            playedOut = false;
             Handover.STATE.recitationKeyPressed();
             finish();
             return;
@@ -246,6 +260,8 @@ public class QuranActivity extends Activity {
             tick();
         });
         player.setOnCompletionListener(mp -> {
+            // After Stop, Back or another app's sound the recitation is already ending early.
+            if (closing()) return;
             EventLog.i(this, TAG, "recitation finished");
             playedOut = true;
             finish();
@@ -364,10 +380,14 @@ public class QuranActivity extends Activity {
             if (!handedOver && !isChangingConfigurations()) {
                 Handover.Step step = Handover.STATE.recitationEnd();
                 if (step.volume != WakePlan.KEEP) setVolume(step.volume);
-                EventLog.i(this, TAG, "recitation ended" + (playedOut ? " at its end" : " early")
-                        + (step.sleep ? ", standby" : playedOut && Screen.canPutBack() ? ", standby warning" : ", TV stays on"));
+                // A TV turned off since the end is not woken again for the warning.
+                boolean warn = !step.sleep && playedOut && Screen.canPutBack()
+                        && getSystemService(PowerManager.class).isInteractive() && Handover.STATE.playedOut();
+                EventLog.i(this, TAG, "recitation ended" + (playedOut ? " at its end" : " early") + (step.sleep ? ", standby"
+                        : warn ? ", standby warning" : Handover.STATE.standbyAtAzanEnd() ? ", standby left to the Azan"
+                        : ", TV stays on"));
                 if (step.sleep) SleepService.sleep(getApplicationContext());
-                else if (playedOut && Screen.canPutBack()) StandbyWarningActivity.show(getApplicationContext());
+                else if (warn) StandbyWarningActivity.show(getApplicationContext());
             }
         }
         super.onDestroy();

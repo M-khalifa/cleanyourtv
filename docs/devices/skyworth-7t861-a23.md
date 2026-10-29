@@ -83,15 +83,20 @@ cd launcher
 Install the compiled launcher and the companion `coocaa-home-shim` (`com.ccos.tv.homepage`), which bridges Coocaa OS home dispatch to the CleanYourTV activity. The shim is not part of this repository: it is its own project, [coocaa-home-shim](https://github.com/VincentYe123/coocaa-home-shim), whose releases page carries the APK (or build it from source). `tools/tv.py` installs nothing on its own, so an APK goes up with `tools/b64push.py` and the TV's own `pm install` runs it, the way [`examples/skyworth-7s60-a5`](../../examples/skyworth-7s60-a5/README.md) does it on the same OS:
 
 ```bash
-TV_HOST=<tv ip> tools/b64push.py launcher/app/build/outputs/apk/release/app-release.apk /data/local/tmp/tvhome.apk
+TV_HOST=<tv ip> tools/venv/bin/python -I tools/b64push.py launcher/app/build/outputs/apk/release/app-release.apk /data/local/tmp/tvhome.apk
 TV_HOST=<tv ip> tools/tv.py 'pm install -r /data/local/tmp/tvhome.apk; rm -f /data/local/tmp/tvhome.apk'
-TV_HOST=<tv ip> tools/b64push.py coocaa-home-shim.apk /data/local/tmp/shim.apk
+TV_HOST=<tv ip> tools/venv/bin/python -I tools/b64push.py coocaa-home-shim.apk /data/local/tmp/shim.apk
 TV_HOST=<tv ip> tools/tv.py 'pm install -r /data/local/tmp/shim.apk; rm -f /data/local/tmp/shim.apk'
 ```
 
 ### Step 3: Redirect Coocaa Home properties
 
-Point the system homepage properties to the shim using `tools/tv.py`:
+Point both pairs of system homepage properties to the shim using `tools/tv.py`. Coocaa OS uses a dual-track
+dispatch mechanism for physical remote Home button presses:
+- `persist.service.homepage.*` controls dispatch in standard video, elder, and children's modes.
+- `persist.service.model.*` controls dispatch when the TV is set to or was previously in "Home Office" mode (`com.skyworth.officehomepage`).
+
+Both pairs must point to the shim. If `persist.service.model.*` is omitted or left on its default, pressing the remote's Home button while the TV is in Home Office mode bypasses Android's default home and bounces back to `com.skyworth.officehomepage`.
 
 ```bash
 TV_HOST=<tv ip> tools/tv.py 'setprop persist.service.homepage.pkg com.ccos.tv.homepage'

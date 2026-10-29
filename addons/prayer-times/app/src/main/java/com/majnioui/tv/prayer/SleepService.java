@@ -29,21 +29,25 @@ public class SleepService extends AccessibilityService {
 
     /** Sends the TV to standby, waiting briefly for the service to bind if it was just put back. */
     static void sleep(Context c) {
-        if (sleepNow(c)) return;
+        if (instance != null) {
+            sleepNow(c);
+            return;
+        }
         if (!ensureEnabled(c)) {
             EventLog.w(c, TAG, "SleepService is not switched on: the TV stays on");
             return;
         }
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (!sleepNow(c)) EventLog.w(c, TAG, "SleepService did not bind: the TV stays on");
+            if (instance == null) EventLog.w(c, TAG, "SleepService did not bind: the TV stays on");
+            else sleepNow(c);
         }, BIND_WAIT_MS);
     }
 
-    private static boolean sleepNow(Context c) {
+    private static void sleepNow(Context c) {
         SleepService service = instance;
-        if (service == null) return false;
-        EventLog.i(c, TAG, "TV back to standby");
-        return service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
+        if (service == null) return;
+        if (service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)) EventLog.i(c, TAG, "TV back to standby");
+        else EventLog.w(c, TAG, "standby refused by Android: the TV stays on");
     }
 
     /** Puts the service back in the enabled list if it fell out; false when it cannot (permission not granted). */

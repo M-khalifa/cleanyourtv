@@ -40,3 +40,7 @@ The Prayer Times add-on, the Home card and the merge with upstream were checked 
 [SkillArray](https://github.com/M-khalifa/SkillArray): Claude and Codex review the same code and cross-examine each
 other's findings. Three runs gave 33 findings: 31 confirmed and fixed, 1 refuted, and 1 left open at low stakes
 (whether the exact prayer times could hint at the city).
+
+The merge with upstream v3.1 and the recitation auto-off were checked the same way before they went in: two runs and
+a second round on the fixes gave 16 findings: 15 fixed and 1 refuted. A last single-reviewer pass on
+those fixes found four low-stakes edge cases, each of which leaves the TV on rather than turning it off.

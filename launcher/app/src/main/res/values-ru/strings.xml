@@ -10,6 +10,7 @@
     <string name="not_connected">Нет устройства</string>
     <string name="live_tv">Телеканалы</string>
     <string name="no_inputs">Источники не найдены</string>
+    <string name="more_inputs">Другие источники</string>
     <string name="good_morning">Доброе утро</string>
     <string name="good_afternoon">Добрый день</string>
     <string name="good_evening">Добрый вечер</string>
@@ -150,4 +151,5 @@
          last opened, e.g. "5 minutes ago" or "yesterday, 9:40 pm". -->
     <string name="last_opened">Последний запуск: %1$s</string>
     <string name="bluetooth">Bluetooth</string>
+    <string name="game_live">Сейчас в эфире</string>
 </resources>

@@ -34,6 +34,14 @@ final class Handover {
     private int azanRestore = -1;
     private boolean recitation, recitationWoke, recitationKey, recitationApplied;
     private int recitationRestore = -1;
+    /** The one-minute warning after a recitation that played out is counting down. */
+    private boolean warning;
+    /** A played-out recitation's standby, left to the Azan's end: only a key during the Azan itself cancels it. */
+    private boolean azanForced;
+    /** Closes the warning's screen when an event takes over; set by StandbyWarningActivity. */
+    Runnable warningCloser;
+    /** This app's alarm screens (Azan, early wake, recitation) now started: the warning's leaving was not the user. */
+    private int ownScreens;
 
     boolean azanPlaying() {
         return azan;
@@ -62,6 +70,11 @@ final class Handover {
 
     /** The Azan starts at {@code volume} (or KEEP) with the TV at {@code current}; returns the volume to set. */
     int azanStart(boolean woke, int volume, int current) {
+        if (warning) {
+            warning = false;
+            azanForced = true;
+            closeWarning();
+        }
         azan = true;
         azanWoke = woke;
         azanKey = false;
@@ -75,7 +88,8 @@ final class Handover {
         if (!azan) return new Step(WakePlan.KEEP, false);
         azan = false;
         boolean key = keyPressed || azanKey;
-        boolean sleep = azanWoke && !key;
+        boolean sleep = azanWoke && !key || azanForced && !keyPressed;
+        azanForced = false;
         int volume = azanRestore < 0 ? WakePlan.KEEP : azanRestore;
         azanWoke = false;
         azanKey = false;
@@ -93,8 +107,14 @@ final class Handover {
 
     /** A recitation opens; {@code restore} is a volume carried from the recitation it takes over, else -1. */
     void recitationStart(boolean woke, boolean keyPressed, int restore) {
+        boolean pending = warning;
+        if (warning) {
+            // The new recitation decides at its own end and owes the standby the warning was counting down to.
+            warning = false;
+            closeWarning();
+        }
         recitation = true;
-        recitationWoke = woke;
+        recitationWoke = woke || pending;
         recitationKey = keyPressed;
         recitationRestore = restore;
         recitationApplied = restore >= 0;
@@ -141,6 +161,51 @@ final class Handover {
         }
         forgetIfIdle();
         return new Step(restore < 0 ? WakePlan.KEEP : restore, sleep);
+    }
+
+    /**
+     * A recitation that played to its end and did not go to standby: true to show the one-minute warning now; during
+     * an Azan the standby goes to the Azan's end instead.
+     */
+    boolean playedOut() {
+        if (azan) {
+            azanForced = true;
+            return false;
+        }
+        warning = true;
+        return true;
+    }
+
+    boolean warningShowing() {
+        return warning;
+    }
+
+    /** The warning ran out with no key: true to go to standby now, false when an event took it over. */
+    boolean warningExpired() {
+        if (!warning) return false;
+        warning = false;
+        return !azan && !recitation;
+    }
+
+    void warningCancelled() {
+        warning = false;
+    }
+
+    /** The TV goes to standby when the running Azan ends, unless a key is pressed during it. */
+    boolean standbyAtAzanEnd() {
+        return azan && (azanForced || azanWoke && !azanKey);
+    }
+
+    void ownScreenShown(boolean shown) {
+        ownScreens = Math.max(0, ownScreens + (shown ? 1 : -1));
+    }
+
+    boolean ownScreenShowing() {
+        return ownScreens > 0;
+    }
+
+    private void closeWarning() {
+        if (warningCloser != null) warningCloser.run();
     }
 
     /** The first volume change of an overlap is kept outside the process, in case it dies before the end. */

@@ -37,6 +37,7 @@
     <string name="not_connected">未连接</string>
     <string name="live_tv">电视直播</string>
     <string name="no_inputs">未找到输入源</string>
+    <string name="more_inputs">更多输入源</string>
     <string name="good_morning">早上好</string>
     <string name="good_afternoon">下午好</string>
     <string name="good_evening">晚上好</string>
@@ -146,4 +147,5 @@
     <string name="tile_move">移动</string>
     <string name="tile_replace_in_dock">替换为其他应用</string>
     <string name="bluetooth">蓝牙</string>
+    <string name="game_live">直播中</string>
 </resources>

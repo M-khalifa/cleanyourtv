@@ -80,7 +80,7 @@ which cancels them.
 | `INTERNET` | Aladhan: the day's times; the recitation streams. |
 | `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `RECEIVE_BOOT_COMPLETED` | Alerts, Azan and recitations on time, re-armed after a restart. |
 | `SYSTEM_ALERT_WINDOW` | The pill, banner and Azan window over other apps; also what lets an alarm open a screen at once. |
-| `FOREGROUND_SERVICE` (special use, media playback) | The pill and the Azan while another app is on screen. They run only while one is showing or playing. |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | The pill and the Azan while another app is on screen. They run only while one is showing or playing. |
 | `WRITE_SECURE_SETTINGS` (ADB only) | Switching `SleepService` back on, nothing else. |
 
 What is sent: the date, the chosen city's latitude and longitude, the method and the Asr school to Aladhan; the

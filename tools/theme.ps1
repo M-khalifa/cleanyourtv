@@ -3,11 +3,23 @@
 #
 # Usage: tools\theme.ps1 -TvHost 192.168.1.50 themes\aurora
 #        tools\theme.ps1 -TvHost 192.168.1.50 -Reset
+#
+# One argument, and -Reset takes none: both together are refused rather than one of them dropped (below).
+# Exit status as in theme.sh: 0 the theme is on the TV, or the reset ran; 1 the theme could not be pushed; 2 the
+# command line is not one theme folder or -Reset, so nothing was sent.
 param(
     [Parameter(Position = 0)][string]$Theme,
     [switch]$Reset,
     [string]$TvHost = $env:TV_HOST
 )
+# theme.sh judges its own command line here, and this is the same judgement: -Reset removes the theme from the
+# TV and a folder pushes it, so `-Reset themes\aurora` used to take the reset branch and throw the folder away
+# (the theme the reader named was removed instead of pushed), while `themes\aurora -Reset` pushed the theme and
+# ignored the reset. Nothing is sent for either.
+if ($Theme -and $Reset) {
+    [Console]::Error.WriteLine("theme.ps1 takes one argument, a theme folder or -Reset: $Theme would not have been used, and -Reset removes the theme from the TV while a folder pushes it, so the two cannot share a command line. Nothing was sent to the TV.")
+    exit 2
+}
 $ErrorActionPreference = 'Stop'
 $OutputEncoding = New-Object System.Text.UTF8Encoding $false
 if (-not $TvHost) { throw 'pass -TvHost <tv ip> or set $env:TV_HOST' }
@@ -58,10 +70,16 @@ if ($Reset) {
     Write-Host 'reset'
     exit 0
 }
-if (-not $Theme) { throw 'usage: theme.ps1 <theme folder> | -Reset' }
+if (-not $Theme) { [Console]::Error.WriteLine('usage: theme.ps1 <theme folder> | -Reset'); exit 2 }
 $config = Join-Path $Theme 'config.json'
 if (-not (Test-Path $config)) { throw "no config.json in $Theme" }
-try { Get-Content $config -Raw | ConvertFrom-Json | Out-Null } catch { throw "$config is not valid JSON" }
+try { $themeJson = Get-Content $config -Raw | ConvertFrom-Json } catch { throw "$config is not valid JSON" }
+# Config.read() answers "no overlay" for anything that is not a JSON object, so an array, a number or a
+# string is a theme the launcher drops - and it replaces the theme the set had with the built-in config.
+# Judged here, before anything is pushed, so "is on the TV" cannot mean the opposite.
+if ($themeJson -isnot [System.Management.Automation.PSCustomObject]) {
+    throw "$config is not a JSON object of theme keys, so the launcher would ignore it and the TV would go back to its built-in config (themes/README.md). Nothing was sent to the TV."
+}
 # Every collection name is checked before anything changes on the TV, as in theme.sh: a name refused halfway
 # through the push left the new config.json and part of the collection behind. b64push.py refuses '..' in a path.
 $wallpapers = Join-Path $Theme 'wallpapers'

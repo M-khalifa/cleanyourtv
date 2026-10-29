@@ -10,6 +10,7 @@
     <string name="not_connected">未連接裝置</string>
     <string name="live_tv">電視直播</string>
     <string name="no_inputs">找不到輸入來源</string>
+    <string name="more_inputs">更多輸入來源</string>
     <string name="good_morning">早安</string>
     <string name="good_afternoon">午安</string>
     <string name="good_evening">晚安</string>
@@ -93,4 +94,5 @@
     </plurals>
     <string name="greeting_with_name">%1$s，%2$s</string>
     <string name="bluetooth">藍牙</string>
+    <string name="game_live">直播中</string>
 </resources>

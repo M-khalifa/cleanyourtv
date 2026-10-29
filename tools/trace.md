@@ -25,6 +25,9 @@ It sends a binary trace config, which Android 9 accepts without the `--txt` opti
 TV_HOST=<tv ip> tools/venv/bin/python -I tools/trace.py home --runs 5 --out traces/before
 ```
 
+`--out` is the folder the traces are written into, and it is created if it is not there. A file where the
+folder goes, a path through a file and an empty `--out` are refused before the TV is asked anything.
+
 | Scenario | Recorded | Use for |
 |---|---|---|
 | `home` | HOME pressed while another app is in front | Most Home changes |
@@ -39,6 +42,11 @@ TV_HOST=<tv ip> tools/venv/bin/python -I tools/trace.py home --runs 5 --out trac
   `bench.py` bring an existing instance to the front across runs, rather than stacking new Settings
   activities. They do not clear the other app's data or force-stop it. Check that it is responsive
   after a long session; an already accumulated history is not removed by this flag.
+- **The package:** `--package` names the launcher, `com.gathin.tvhome` unless your build has another one
+  (a fork: [SHOWCASE.md](../SHOWCASE.md) lists several). It decides which process the recording follows and
+  which one the report reads, so a fork has to pass it to `trace.py`, `trace_report.py` and
+  `flamechart.py` alike: with the wrong name the report prints `–` for every step instead of saying the
+  package was not in the trace, and the chart stops at `no <package> process in the trace`.
 
 ## Report
 

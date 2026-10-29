@@ -6,6 +6,10 @@
     privacy.py --write <file> --include-low
                                     also the packages that only matched by name
 
+`--include-low` is read by the list `--write` writes and by nothing else, so on its own it is refused
+with this usage rather than accepted and ignored: the report prints the name matches either way, and a
+run that asked for them read as if it had got them.
+
 The honest part is the evidence, not the category. On firmware where most packages run under
 `android.uid.system`, about fifty of them "have" RECORD_AUDIO and none of them record anything;
 a per-package permission scan would call all fifty listeners. So this audit says which names the
@@ -23,6 +27,10 @@ import sys
 # Names from the TV end up inside commands run by its shell, so nothing that could carry shell syntax
 # goes through. Same rule as tools/recovery.py.
 PACKAGE_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z0-9_]+)+")
+
+USAGE = ("usage: privacy.py                       audit the connected TV\n"
+         "       privacy.py --write <file> [--include-low]\n"
+         "                                    write the candidates as a debloat list\n")
 
 # What we know about specific packages, from reports in examples/ and docs/ rather than from the name.
 # `category` drives the section in the report; `note` is what the owner reads before disabling it.
@@ -370,6 +378,12 @@ def list_lines(result, include_low, name):
 
 def target_problem(path):
     """Why --write cannot write the file `path`, or None."""
+    if os.path.isdir(path):
+        # The argument is a folder: `--write lists/`, or `--write` with a name that happens to be a
+        # directory. Saying it "already exists" answers a question the owner did not ask, and letting
+        # it through is an IsADirectoryError after the whole audit.
+        return (f"{path} is a folder, and --write takes a file name to create, "
+                f"e.g. {os.path.join(path, 'privacy.txt')}.")
     if os.path.exists(path):
         # A second audit of the same TV may legitimately differ, but silently replacing a list the
         # owner is about to apply is how a hand edit disappears.
@@ -388,8 +402,18 @@ def write_list(path, result, include_low):
     # The header names the file as it was typed, like the commands printed below; an absolute path
     # is cut to the file name, which keeps the owner's home folder out of the list.
     lines = list_lines(result, include_low, os.path.basename(path) if os.path.isabs(path) else path)
-    with open(path, "w") as f:
-        f.write("\n".join(lines) + "\n")
+    text = "\n".join(lines) + "\n"
+    try:
+        with open(path, "w") as f:
+            f.write(text)
+    except OSError as error:
+        # The audit is two shell calls for each package it probed, slow on old firmware: a file the
+        # folder would not take should not cost the owner a second run of it. What was to be written
+        # goes to stdout, so it can be saved by hand.
+        sys.stdout.write(text)
+        raise SystemExit(f"the audit finished, but {path} could not be written: "
+                         f"{error.strerror or error}\n"
+                         "the list is printed above: copy it into a file you can write.")
     names = sum(1 for line in lines if line and not line.startswith("#"))
     print(f"wrote {names} packages to {path}")
     if include_low and result["skipped"]:
@@ -405,10 +429,20 @@ def main():
     args = sys.argv[1:]
     include_low = "--include-low" in args
     args = [a for a in args if a != "--include-low"]
-    if args and (len(args) != 2 or args[0] != "--write"):
-        sys.stderr.write("usage: privacy.py                       audit the connected TV\n"
-                         "       privacy.py --write <file> [--include-low]\n"
-                         "                                    write the candidates as a debloat list\n")
+    # --include-low is only read by the list --write makes (list_lines), so `privacy.py --include-low`
+    # was accepted and changed nothing: the report prints the name matches whether or not it was given,
+    # and the run read as if the ones the owner asked for had been folded in. The usage line below has
+    # always put the flag after --write; now the run says the same thing instead of ignoring it.
+    if include_low and not args:
+        sys.stderr.write(USAGE)
+        sys.stderr.write("--include-low is read by the list --write writes: pass it with --write, "
+                         "e.g. privacy.py --write privacy.txt --include-low\n")
+        return 2
+    if args and (len(args) != 2 or args[0] != "--write" or not args[1]):
+        # An empty name is what `--write "$OUT"` sends when OUT was never set - the same mistake as
+        # leaving the name out, and os.path checks read "" as "a file in the folder I am in", so it
+        # used to come back as a FileNotFoundError after the whole audit.
+        sys.stderr.write(USAGE)
         return 2
 
     if args:

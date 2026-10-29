@@ -219,4 +219,109 @@ public class HandoverTest {
         apply(h.recitationEnd());
         assertEquals(java.util.Arrays.asList("save 20 2", "clear"), log);
     }
+
+    /** The TV was already on and someone pressed a key: the recitation plays out, the warning runs out. */
+    @Test
+    public void playedOutWarningRunsOutToStandby() {
+        h.recitationStart(false, false, -1);
+        recitePlay();
+        h.recitationKeyPressed();
+        apply(h.recitationEnd());
+        assertEquals(0, sleeps);
+        assertTrue(h.playedOut());
+        assertTrue(h.warningShowing());
+        assertTrue(h.warningExpired());
+        assertFalse(h.warningShowing());
+    }
+
+    @Test
+    public void cancelledWarningNeverGoesToStandby() {
+        assertTrue(h.playedOut());
+        h.warningCancelled();
+        assertFalse("a tick still queued after the cancel", h.warningExpired());
+    }
+
+    /** An Azan starting during the warning closes it and takes the standby, ignoring the recitation's old key. */
+    @Test
+    public void azanDuringTheWarningTakesTheStandbyOver() {
+        int[] closed = {0};
+        h.warningCloser = () -> closed[0]++;
+        h.recitationStart(false, true, -1);
+        recitePlay();
+        apply(h.recitationEnd());
+        assertTrue(h.playedOut());
+        azanStart(false, AZAN);
+        assertEquals(1, closed[0]);
+        assertFalse(h.warningShowing());
+        assertTrue(h.standbyAtAzanEnd());
+        apply(h.azanEnd(false));
+        assertEquals(1, sleeps);
+    }
+
+    /** Dismissing that Azan, or any key during it, means someone is watching. */
+    @Test
+    public void keyDuringTheAzanCancelsTheTakenOverStandby() {
+        assertTrue(h.playedOut());
+        azanStart(false, AZAN);
+        apply(h.azanEnd(true));
+        assertEquals(0, sleeps);
+        assertFalse("the Azan's end leaves nothing pending", h.warningExpired());
+    }
+
+    /** A recitation that plays out while an Azan is on shows no warning under the Azan window. */
+    @Test
+    public void playedOutDuringAnAzanGoesToTheAzanEnd() {
+        h.recitationStart(false, true, -1);
+        recitePlay();
+        azanStart(false, AZAN);
+        apply(h.recitationEnd());
+        assertFalse(h.playedOut());
+        assertFalse(h.warningShowing());
+        apply(h.azanEnd(false));
+        assertEquals(1, sleeps);
+    }
+
+    @Test
+    public void nextRecitationDuringTheWarningClosesIt() {
+        int[] closed = {0};
+        h.warningCloser = () -> closed[0]++;
+        assertTrue(h.playedOut());
+        h.recitationStart(false, false, -1);
+        assertEquals(1, closed[0]);
+        assertFalse(h.warningExpired());
+    }
+
+    @Test
+    public void ownScreensAreCountedUntilTheyStop() {
+        assertFalse(h.ownScreenShowing());
+        h.ownScreenShown(true);
+        h.ownScreenShown(true);
+        h.ownScreenShown(false);
+        assertTrue("an early wake still in front", h.ownScreenShowing());
+        h.ownScreenShown(false);
+        assertFalse(h.ownScreenShowing());
+        h.ownScreenShown(false);
+        h.ownScreenShown(true);
+        assertTrue("an extra stop never hides a later start", h.ownScreenShowing());
+    }
+
+    /** Friday's Al-Kahf opens during the morning recitation's warning and then never loads. */
+    @Test
+    public void recitationDuringTheWarningOwesItsStandby() {
+        assertTrue(h.playedOut());
+        h.recitationStart(false, false, -1);
+        assertFalse(h.warningShowing());
+        apply(h.recitationEnd());
+        assertEquals(1, sleeps);
+    }
+
+    @Test
+    public void keyDuringTheNextRecitationStillKeepsTheTvOn() {
+        assertTrue(h.playedOut());
+        h.recitationStart(false, false, -1);
+        recitePlay();
+        h.recitationKeyPressed();
+        apply(h.recitationEnd());
+        assertEquals(0, sleeps);
+    }
 }

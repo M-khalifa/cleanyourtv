@@ -18,6 +18,14 @@ the key's own type in the Keys table needs - true or false for a bool, a JSON li
 table says so, the text itself for a string - and refuses one the launcher would ignore or a number outside the
 range the table states. A theme's config.json is hand-edited, so one that cannot be read, is not JSON, or is not a
 JSON object is named before the key is written, and a write it cannot make says so instead of ending in a traceback.
+set's own arguments are read first: a switch without a value, a --theme without the folder behind it, and a word
+left over are answered with the usage line and exit 2 before a theme folder is read or written. list, status,
+show, install and remove read their own words the same way, before anything is read from this checkout or asked
+of the TV.
+
+Exit status: 0 the command ran, 1 a command on the TV or a script this checkout runs failed, 2 the command line
+asked for something this script does not do - a command it does not have, or a word the command would drop - which
+is answered before the READMEs are read or the TV is asked anything.
 """
 import json
 import math
@@ -269,7 +277,7 @@ def theme_config(folder):
     if not path.is_file():
         return {}, None            # a folder of their own with no config.json yet: set starts the file
     try:
-        text = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8-sig")
     except (OSError, UnicodeDecodeError) as e:
         return {}, f"cannot read {path}: {reason(e)}. Nothing was written or pushed."
     try:
@@ -343,9 +351,10 @@ def show_line(item, installed=None):
 
 def cmd_list(what):
     groups = {"addons": addons, "themes": themes, "switches": switches}
-    for g in ([what] if what else ["addons", "themes", "switches"]):
+    for g in ([what] if what else list(LIST_GROUPS)):
         if g not in groups:
-            sys.exit("list addons, themes or switches")
+            sys.stderr.write(f"list takes addons, themes or switches, not {g!r}: {USAGE_LINES['list']}\n")
+            return 2
         items = groups[g]()
         print(f"{g} ({len(items)})")
         for item in items:
@@ -435,32 +444,124 @@ def cmd_set(key, value, theme_folder):
     return run(["bash", str(TOOLS / "theme.sh"), str(folder)], ROOT)
 
 
+SET_USAGE = ("set takes a switch, its value and --theme <your theme folder>, e.g. "
+             "set hidden_apps '[\"a\", \"b\"]' --theme ~/my-theme")
+
+
+class Usage(Exception):
+    """A command line that cannot run: the message goes to stderr and the status is 2."""
+
+
+# What each command's own line may carry, and the usage line it answers with. `list` prints one of the three
+# groups: its usage line has one word because `list addons themes` printed the add-ons and exited 0, which reads as
+# "both are listed". `show` and `install` take any number of words on purpose - an add-on's name in
+# addons/README.md can be several ("Frigate Glance"), and install passes what is left to the creator's script.
+# `remove` is the reason this is worth judging: `remove weather --dry-run` ran pm uninstall on the TV with a word
+# the command never read, so the set was changed by a command line that asked for something else.
+WORDS = {
+    "list": (0, 1, "addons, themes or switches"),
+    "show": (1, None, "an add-on, theme or switch"),
+    "status": (0, 0, "no words"),
+    "install": (1, None, "an add-on or a theme"),
+    "remove": (1, 1, "one add-on"),
+}
+
+USAGE_LINES = {
+    "list": "list [addons|themes|switches]",
+    "show": "show <add-on, theme or switch>",
+    "status": "status",
+    "install": "install <add-on or theme> [script arguments]",
+    "remove": "remove <add-on>",
+}
+
+LIST_GROUPS = ("addons", "themes", "switches")
+
+
+def own_words(command, args):
+    """The words `command` reads, or Usage naming what is missing or what it would drop there.
+
+    Every command here used to read the first word or two of its own line and ignore the rest, while set has
+    answered a leftover word with the usage line and exit 2 since it was given one: `list addons themes` listed
+    the add-ons and exited 0, `status --json` printed the status it prints without the flag, and `remove
+    weather --dry-run` uninstalled the add-on. A word the command does not read is a command line that asked for
+    something this script does not do, so it is answered before a README is read or the TV is asked anything.
+    """
+    least, most, what = WORDS[command]
+    if len(args) < least:
+        raise Usage(f"{command} needs {what}: {USAGE_LINES[command]}")
+    if most is not None and len(args) > most:
+        dropped = " ".join(args[most:])
+        raise Usage(f"{command} takes {what}, and would drop {dropped!r}: {USAGE_LINES[command]}")
+    if command == "list" and args and args[0] not in LIST_GROUPS:
+        raise Usage(f"list takes addons, themes or switches, not {args[0]!r}: {USAGE_LINES[command]}")
+    return args
+
+
+def set_args(args):
+    """(key, value, theme) from set's own arguments, or Usage naming what is missing.
+
+    --theme is lifted out wherever it sits, as it always was, and what it leaves has to be exactly the switch
+    and its value. `set hidden_apps --theme <your folder>`, the value left out, reached cmd_set with one
+    argument and ended in an IndexError traceback with exit 1 - the status the script otherwise keeps for a
+    theme.sh push that failed, so a word left out read as "the theme was pushed and the TV refused it". A
+    --theme with no folder behind it, a second --theme, and any word left over are the same mistake, and every
+    one of them is judged here, before a theme folder is read or written.
+    """
+    rest = list(args)
+    theme = None
+    if not rest:
+        raise Usage(f"set needs a switch, its value and --theme <your theme folder>: {SET_USAGE}")
+    if "--theme" in rest:
+        i = rest.index("--theme")
+        if i + 1 == len(rest):
+            raise Usage(f"--theme needs the folder it writes into: {SET_USAGE}")
+        theme = rest[i + 1]
+        del rest[i:i + 2]
+        if "--theme" in rest:
+            raise Usage(f"set takes one --theme and was given twice: {SET_USAGE}")
+    if len(rest) > 2:
+        raise Usage(f"set takes one switch and one value, and {len(rest)} words were given: {SET_USAGE}")
+    missing = []
+    if not rest:
+        missing.append("a switch and its value")
+    elif len(rest) == 1:
+        missing.append(f"the value of {rest[0]}")
+    if not theme:
+        missing.append("--theme <your theme folder>")
+    if missing:
+        raise Usage(f"set needs {' and '.join(missing)}: {SET_USAGE}")
+    return rest[0], rest[1], theme
+
+
 def main(argv):
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(__doc__)
         return 0
     c, args = argv[0], argv[1:]
+    if c == "set":
+        try:
+            key, value, theme = set_args(args)
+        except Usage as usage:
+            sys.stderr.write(f"{usage}\n")
+            return 2
+        return cmd_set(key, value, theme)
+    if c not in WORDS:
+        print(__doc__)
+        return 2
+    try:
+        args = own_words(c, args)
+    except Usage as usage:
+        sys.stderr.write(f"{usage}\n")
+        return 2
     if c == "list":
         return cmd_list(args[0] if args else None)
-    if c == "show" and args:
-        return cmd_show(" ".join(args))
+    if c == "show":
+        return cmd_show(" ".join(args))   # a name can be several words: "Frigate Glance"
     if c == "status":
         return cmd_status()
-    if c == "install" and args:
+    if c == "install":
         return cmd_install(args[0], args[1:])
-    if c == "remove" and args:
-        return cmd_remove(args[0])
-    if c == "set" and len(args) >= 2:
-        theme = None
-        if "--theme" in args:
-            i = args.index("--theme")
-            theme = args[i + 1] if i + 1 < len(args) else None
-            args = args[:i] + args[i + 2:]
-        if not theme:
-            sys.exit("set needs --theme <your theme folder>")
-        return cmd_set(args[0], args[1], theme)
-    print(__doc__)
-    return 2
+    return cmd_remove(args[0])
 
 
 if __name__ == "__main__":

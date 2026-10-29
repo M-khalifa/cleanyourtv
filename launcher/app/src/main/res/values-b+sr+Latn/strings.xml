@@ -10,6 +10,7 @@
     <string name="not_connected">Nema uređaja</string>
     <string name="live_tv">TV programi</string>
     <string name="no_inputs">Nema pronađenih ulaza</string>
+    <string name="more_inputs">Još ulaza</string>
     <string name="good_morning">Dobro jutro</string>
     <string name="good_afternoon">Dobar dan</string>
     <string name="good_evening">Dobro veče</string>
@@ -75,4 +76,5 @@
     </plurals>
     <string name="greeting_with_name">%1$s, %2$s</string>
     <string name="bluetooth">Bluetooth</string>
+    <string name="game_live">Uživo sada</string>
 </resources>
