@@ -28,8 +28,8 @@ public class OptionsTest {
         stored.put(Options.AZAN, true);
         stored.put(Options.AZAN_PRAYER + PrayerTimes.FAJR, false);
         stored.put(Options.ALERTS, "yes");
-        stored.put(Options.LAT, "33.1507");
-        stored.put(Options.LON, "-96.8236");
+        stored.put(Options.LAT, "41.8781");
+        stored.put(Options.LON, "-87.6298");
         Options o = Options.apply(base, stored);
         assertTrue(o.alerts);
         assertTrue(o.azan);
@@ -69,8 +69,8 @@ public class OptionsTest {
     @Test
     public void storedTimesForAnotherCityOrMethodReadAsMissing() {
         Options o = new Options();
-        o.lat = 33.1507;
-        o.lon = -96.8236;
+        o.lat = 41.8781;
+        o.lon = -87.6298;
         String fp = o.fingerprint();
         int[] m = {391, 460, 791, 981, 1125, 1193};
         String value = fp + ";" + DailyTimes.encode(m);
@@ -107,8 +107,8 @@ public class OptionsTest {
 
     @Test
     public void hanafiAsrIsLaterAndUmmAlQuraIshaIsNinetyMinutesAfterMaghrib() {
-        int[] std = PrayerTimes.compute(2026, 10, 25, 33.1507, -96.8236, -5, 18.5, -90, 1);
-        int[] hanafi = PrayerTimes.compute(2026, 10, 25, 33.1507, -96.8236, -5, 18.5, -90, 2);
+        int[] std = PrayerTimes.compute(2026, 10, 25, 41.8781, -87.6298, -5, 18.5, -90, 1);
+        int[] hanafi = PrayerTimes.compute(2026, 10, 25, 41.8781, -87.6298, -5, 18.5, -90, 2);
         assertTrue(hanafi[PrayerTimes.ASR] - std[PrayerTimes.ASR] > 30);
         assertEquals(90, std[PrayerTimes.ISHA] - std[PrayerTimes.MAGHRIB], 1);
     }
