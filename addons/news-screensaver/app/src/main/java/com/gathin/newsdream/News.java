@@ -110,7 +110,8 @@ final class News {
         return mixed;
     }
 
-    static void save(File dir, List<Headline> headlines) {
+    /** Synchronized: the screensaver's and the card provider's refreshes write the same temp file. */
+    static synchronized void save(File dir, List<Headline> headlines) {
         File tmp = new File(dir, CACHE + ".tmp");
         try (DataOutputStream out = new DataOutputStream(new FileOutputStream(tmp))) {
             out.writeInt(CACHE_VERSION);

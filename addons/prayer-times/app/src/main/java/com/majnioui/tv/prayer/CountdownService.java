@@ -60,6 +60,11 @@ public class CountdownService extends Service {
         return "in " + minutes / 60 + " h " + minutes % 60 + " min";
     }
 
+    /** Milliseconds until "in N min" changes, a little past it: the minute turns with the clock. */
+    static long nextTurn(long millisLeft) {
+        return (millisLeft - 1) % 60_000 + 1 + 50;
+    }
+
     @Override
     public IBinder onBind(Intent intent) {
         return null;
@@ -142,7 +147,7 @@ public class CountdownService extends Service {
         line.setTextColor(color);
         line.setText("●  " + PrayerAlerts.NAMES[prayer].toUpperCase() + " " + countdown(left).toUpperCase()
                 + "  ·  " + PrayerAlerts.ARABIC[prayer]);
-        main.postDelayed(this::tick, Math.min(TICK_MS, left));
+        main.postDelayed(this::tick, Math.min(TICK_MS, nextTurn(left)));
     }
 
     @Override

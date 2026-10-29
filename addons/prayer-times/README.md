@@ -91,7 +91,9 @@ What is sent: the date, the chosen city's latitude and longitude, the method and
 name you type in the city search to [Open-Meteo's geocoding](https://open-meteo.com/en/docs/geocoding-api); and a
 request for the surah's MP3 when a recitation plays. No account, no telemetry, no ads, no location permission. The
 home-screen provider gives only the day's prayer times, whether it is Ramadan, the Hijri date and whether the
-countdown is on: no coordinates or city name, though prayer times always hint at the general area.
+countdown is on: no coordinates or city name, though prayer times always hint at the general area. The card's
+live row (`content://com.majnioui.tv.prayer.card`, for cleanyourtv's home widget) gives only the next recitation that
+is switched on and when.
 Backups are off.
 
 ## Home card (Clean Your TV launcher)

@@ -58,5 +58,11 @@
             android:authorities="com.gathin.newsdream.files"
             android:exported="true"
             android:permission="android.permission.WRITE_SECURE_SETTINGS" />
+
+        <!-- The card's live row (live="true" in module_card.xml): the newest cached headline, read-only. -->
+        <provider
+            android:name=".CardProvider"
+            android:authorities="com.gathin.newsdream.card"
+            android:exported="true" />
     </application>
 </manifest>

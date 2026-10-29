@@ -96,7 +96,9 @@ white, so it doesn't glare; phones read it from the sofa at about 9:1 contrast.
 ## How it fetches
 
 The feeds are read when the screensaver or the card starts, then every 15 minutes while it shows, or 2 minutes after
-everything failed. Nothing runs in the background when it is not on screen. The last good list is kept in the app's
+everything failed. The home widget (cleanyourtv's `widget_sources`, `app:com.gathin.newsdream`) reads one of the
+10 newest headlines from `content://com.gathin.newsdream.card`, a different one every 30 seconds; that read also starts one fetch when the cached list is older than
+15 minutes, at most one every 5 minutes. Otherwise nothing runs in the background. The last good list is kept in the app's
 storage, so the screensaver shows headlines at once, and with no network the last ones it had. A feed that fails is
 skipped and the others still show. Each reply is read up to 2 MB and at most 20 items per feed; 60 headlines in all.
 
@@ -115,7 +117,8 @@ That is all. What goes out is a plain GET for each feed address, with the user a
 `cleanyourtv-news/1.0`; each news site sees the TV's IP address, as with any visit. No account, no telemetry, no ads,
 no background service, no location. Feeds, seconds and the cached headlines stay in the app's own storage (backups
 are off). The provider that `setup.sh` writes through requires `WRITE_SECURE_SETTINGS`, which the ADB shell has and
-apps don't, so no other app can change the feeds.
+apps don't, so no other app can change the feeds. The card provider is read-only and gives only one of the newest cached
+headlines (source, title, age), never the feed list.
 
 ## Tested on
 
