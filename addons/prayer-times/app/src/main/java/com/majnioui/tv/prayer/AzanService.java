@@ -11,8 +11,6 @@ import android.content.IntentFilter;
 import android.content.pm.ServiceInfo;
 import android.content.res.Resources;
 import android.graphics.PixelFormat;
-import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.StateListDrawable;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -198,11 +196,7 @@ public class AzanService extends Service {
         window.setOrientation(LinearLayout.VERTICAL);
         window.setGravity(Gravity.CENTER_HORIZONTAL);
         window.setPadding((int) (48 * dp), (int) (22 * dp), (int) (48 * dp), (int) (22 * dp));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xF0101814);
-        bg.setStroke((int) (2 * dp), PrayerAlerts.COLOR_AT);
-        bg.setCornerRadius(32 * dp);
-        window.setBackground(bg);
+        window.setBackground(Glass.dark(dp, PrayerAlerts.COLOR_AT, Glass.RADIUS));
         // Full-width single lines: wrapped to the text, the overlay measured them short and cut them at the dot.
         window.setMinimumWidth((int) (560 * dp));
         for (android.widget.TextView line : new android.widget.TextView[]{
@@ -219,17 +213,7 @@ public class AzanService extends Service {
         dismiss.setText("Dismiss Azan");
         dismiss.setAllCaps(false);
         dismiss.setTextSize(18);
-        dismiss.setTextColor(0xFFFFFFFF);
-        GradientDrawable idle = new GradientDrawable();
-        idle.setCornerRadius(24 * dp);
-        idle.setColor(0x33FFFFFF);
-        GradientDrawable focused = new GradientDrawable();
-        focused.setCornerRadius(24 * dp);
-        focused.setColor(PrayerAlerts.COLOR_AT);
-        StateListDrawable states = new StateListDrawable();
-        states.addState(new int[]{android.R.attr.state_focused}, focused);
-        states.addState(new int[]{}, idle);
-        dismiss.setBackground(states);
+        Glass.button(dismiss, dp);
         dismiss.setPadding((int) (32 * dp), 0, (int) (32 * dp), 0);
         dismiss.setOnClickListener(v -> {
             EventLog.i(this, TAG, "Azan dismissed");

@@ -274,9 +274,11 @@ public class MainActivity extends Activity {
             card.setOrientation(LinearLayout.VERTICAL);
             card.setGravity(Gravity.CENTER);
             card.setPadding(dp(6), dp(20), dp(6), dp(20));
-            GradientDrawable bg = new GradientDrawable();
-            bg.setCornerRadius(dp(22));
-            bg.setColor(hl ? accent : 0x14FFFFFF);
+            GradientDrawable bg = Glass.light(getResources().getDisplayMetrics().density);
+            if (hl) {
+                bg.setColor(accent);
+                bg.setStroke(0, 0);
+            }
             card.setBackground(bg);
             int dim = i == 1 ? 0x80FFFFFF : 0xFFFFFFFF;
             int fg = hl ? 0xFFFFFFFF : dim;

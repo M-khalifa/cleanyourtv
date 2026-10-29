@@ -169,6 +169,7 @@ public class PreWakeActivity extends Activity {
         v.setTextColor(color);
         v.setGravity(Gravity.CENTER);
         v.setLetterSpacing(sp < 20 ? 0.2f : 0f);
+        v.setTypeface(Glass.font(this, sp < 20 ? 500 : 200));
         return v;
     }
 
