@@ -97,20 +97,32 @@ public class MorningQuran extends BroadcastReceiver {
 
     /** When the next switched-on recitation starts, or 0 when none is on. */
     static long nextDue(Context c) {
+        return nextEvent(c)[0];
+    }
+
+    /** {time, kind} of the next recitation that is switched on; {0, -1} when none. */
+    static long[] nextEvent(Context c) {
         Options o = Options.load(c);
         ZonedDateTime now = ZonedDateTime.now(ZoneId.systemDefault());
         long due = 0;
+        int kind = -1;
         try {
-            if (o.morning) due = nextAt(LocalTime.parse(o.morningTime), now).toInstant().toEpochMilli();
+            if (o.morning) {
+                due = nextAt(LocalTime.parse(o.morningTime), now).toInstant().toEpochMilli();
+                kind = KIND_MORNING;
+            }
             if (o.kahf && o.hasLocation()) {
                 long k = nextKahf(PrayerAlerts.times(c, now.getZone()),
                         c.getResources().getInteger(R.integer.kahf_minutes_before_dhuhr), now).toInstant().toEpochMilli();
-                due = due == 0 ? k : Math.min(due, k);
+                if (due == 0 || k < due) {
+                    due = k;
+                    kind = KIND_KAHF;
+                }
             }
         } catch (RuntimeException e) {
             Log.w(TAG, "cannot work out the next recitation", e);
         }
-        return due;
+        return new long[]{due, kind};
     }
 
     /** The switch for a recitation of {@code kind} is still on. */

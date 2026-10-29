@@ -116,6 +116,14 @@ public class PrayerAlertsTest {
     }
 
     @Test
+    public void countdownTicksJustAfterTheMinuteTurns() {
+        assertEquals("1.5 min left shows 2 min for 30 s more", 30_050, CountdownService.nextTurn(90_000));
+        assertEquals(60_050, CountdownService.nextTurn(60_000));
+        assertEquals(51, CountdownService.nextTurn(1));
+        assertEquals("in 1 min", CountdownService.countdown(90_000 - 30_050));
+    }
+
+    @Test
     public void countdownText() {
         assertEquals("in 42 min", CountdownService.countdown(42 * 60_000L));
         assertEquals("in 1 h 0 min", CountdownService.countdown(60 * 60_000L));

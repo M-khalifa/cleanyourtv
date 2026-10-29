@@ -73,6 +73,12 @@
             android:authorities="com.majnioui.tv.prayer.times"
             android:exported="true" />
 
+        <!-- The card's live row (live="true" in module_card.xml): the next recitation and when, read-only. -->
+        <provider
+            android:name=".CardProvider"
+            android:authorities="com.majnioui.tv.prayer.card"
+            android:exported="true" />
+
         <!-- The daily morning recitation (MorningQuran, QuranActivity). -->
         <receiver android:name=".MorningQuran" android:exported="true">
             <intent-filter>
