@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -128,9 +127,6 @@ public class QuranActivity extends Activity {
 
         float dp = getResources().getDisplayMetrics().density;
         LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER);
-        root.setBackgroundColor(Color.rgb(6, 18, 14));
         String title = getIntent().getStringExtra(MorningQuran.EXTRA_TITLE);
         root.addView(line(title != null ? title : getString(R.string.morning_quran_title), 44, Color.WHITE));
         root.addView(line(getString(R.string.morning_quran_reciter), 22, 0xB3FFFFFF));
@@ -145,17 +141,13 @@ public class QuranActivity extends Activity {
         stop.setText("Stop");
         stop.setAllCaps(false);
         stop.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
-        stop.setTextColor(Color.WHITE);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(26 * dp);
-        bg.setColor(0xFF2BB673);
-        stop.setBackground(bg);
+        Glass.button(stop, dp);
         stop.setPadding((int) (48 * dp), 0, (int) (48 * dp), 0);
         stop.setOnClickListener(v -> finish());
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, (int) (56 * dp));
         blp.topMargin = (int) (36 * dp);
         root.addView(stop, blp);
-        setContentView(root);
+        setContentView(Glass.screen(this, root));
         stop.requestFocus();
 
         attrs = new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA)
@@ -356,6 +348,7 @@ public class QuranActivity extends Activity {
         v.setText(s);
         v.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
         v.setTextColor(color);
+        v.setTypeface(Glass.font(this, sp >= 40 ? 300 : 400));
         v.setGravity(Gravity.CENTER);
         v.setPadding(0, 10, 0, 10);
         return v;

@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -75,9 +74,6 @@ public class StandbyWarningActivity extends Activity {
 
         float dp = getResources().getDisplayMetrics().density;
         LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setGravity(Gravity.CENTER);
-        root.setBackgroundColor(Color.rgb(6, 18, 14));
         root.addView(line("Recitation finished", 22, 0xB3FFFFFF));
         count = line("", 44, Color.WHITE);
         root.addView(count);
@@ -85,17 +81,13 @@ public class StandbyWarningActivity extends Activity {
         keep.setText("Keep the TV on");
         keep.setAllCaps(false);
         keep.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
-        keep.setTextColor(Color.WHITE);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(26 * dp);
-        bg.setColor(0xFF2BB673);
-        keep.setBackground(bg);
+        Glass.button(keep, dp);
         keep.setPadding((int) (48 * dp), 0, (int) (48 * dp), 0);
         keep.setOnClickListener(v -> keepOn("OK"));
         LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, (int) (56 * dp));
         blp.topMargin = (int) (36 * dp);
         root.addView(keep, blp);
-        setContentView(root);
+        setContentView(Glass.screen(this, root));
         keep.requestFocus();
         EventLog.i(this, TAG, "standby in " + SECONDS + " s unless a key is pressed");
         tick();
@@ -179,6 +171,7 @@ public class StandbyWarningActivity extends Activity {
         v.setText(s);
         v.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
         v.setTextColor(color);
+        v.setTypeface(Glass.font(this, sp >= 40 ? 300 : 400));
         v.setGravity(Gravity.CENTER);
         v.setPadding(0, 10, 0, 10);
         return v;

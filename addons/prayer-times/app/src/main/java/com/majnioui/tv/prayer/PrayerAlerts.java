@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.PixelFormat;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -358,11 +357,7 @@ public class PrayerAlerts extends BroadcastReceiver {
         banner.setOrientation(LinearLayout.VERTICAL);
         banner.setGravity(Gravity.CENTER_HORIZONTAL);
         banner.setPadding((int) (36 * dp), (int) (14 * dp), (int) (36 * dp), (int) (16 * dp));
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(0xE6101814);
-        bg.setStroke((int) (2 * dp), color);
-        bg.setCornerRadius(28 * dp);
-        banner.setBackground(bg);
+        banner.setBackground(Glass.dark(dp, color, Glass.RADIUS));
         banner.addView(text(app, kicker.toUpperCase(), 13, color));
         banner.addView(text(app, title, 26, 0xFFFFFFFF));
 
@@ -395,6 +390,7 @@ public class PrayerAlerts extends BroadcastReceiver {
         v.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
         v.setTextColor(color);
         v.setLetterSpacing(sp < 16 ? 0.18f : 0f);
+        v.setTypeface(Glass.font(c, sp < 16 ? 500 : sp >= 26 ? 300 : 400));
         return v;
     }
 }

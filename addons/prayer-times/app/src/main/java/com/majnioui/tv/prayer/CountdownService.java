@@ -110,9 +110,7 @@ public class CountdownService extends Service {
         pill = new LinearLayout(this);
         pill.setGravity(Gravity.CENTER_VERTICAL);
         pill.setPadding((int) (20 * dp), (int) (8 * dp), (int) (22 * dp), (int) (8 * dp));
-        bg = new GradientDrawable();
-        bg.setCornerRadius(22 * dp);
-        bg.setColor(0xE6101814);
+        bg = Glass.dark(dp, 0, 22);
         pill.setBackground(bg);
         line = PrayerAlerts.text(this, "", 15, 0xFFFFFFFF);
         line.setLetterSpacing(0.12f);
