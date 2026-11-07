@@ -24,6 +24,10 @@ final class KeyLogWatcher {
     private static final String TAG = "TvHomeKeyLog";
     private static final Pattern KEY = Pattern.compile("key event: keyCode=(\\d+), action=(\\d+), repeat=(\\d+)");
     private static final long RETRY_MS = 5_000L;
+    /** A vendor key Home opened within this long is Home's press, even if its log line is read after Home paused. */
+    private static final long HOME_PRESS_MS = 3_000L;
+    private static final java.time.format.DateTimeFormatter SINCE =
+            java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm:ss.SSS", java.util.Locale.ROOT);
 
     private final Context ctx;
     private final Map<Integer, String> apps;
@@ -35,6 +39,11 @@ final class KeyLogWatcher {
     KeyLogWatcher(Context ctx, Map<Integer, String> apps) {
         this.ctx = ctx.getApplicationContext();
         this.apps = apps;
+    }
+
+    /** Home already opened this press: it is in front for a vendor key, or it opened the same key a moment ago. */
+    static boolean homeHandled(int key, boolean homeInFront, int homeKey, long sinceHomeKeyMs) {
+        return key >= 1000 && (homeInFront || key == homeKey && sinceHomeKeyMs < HOME_PRESS_MS);
     }
 
     /** The key code of a first press (action 0, repeat 0) in a logcat line, or -1 for any other line. */
@@ -67,8 +76,9 @@ final class KeyLogWatcher {
     private void run() {
         while (!stopped) {
             try {
-                // -T 1: only lines from now on, so a restart never replays an old press.
-                process = new ProcessBuilder("logcat", "-v", "brief", "-T", "1", "TVodSceneManagerService:I", "*:S")
+                // -T <now>: only lines from now on, so a start or restart never replays an earlier press.
+                String since = java.time.LocalDateTime.now().format(SINCE);
+                process = new ProcessBuilder("logcat", "-v", "brief", "-T", since, "TVodSceneManagerService:I", "*:S")
                         .redirectErrorStream(true).start();
                 try (BufferedReader in = new BufferedReader(
                         new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
@@ -76,7 +86,8 @@ final class KeyLogWatcher {
                     while (!stopped && (line = in.readLine()) != null) {
                         int key = pressedKey(line);
                         String target = apps.get(key);
-                        if (target == null || key >= 1000 && MainActivity.inFront) continue;
+                        if (target == null || homeHandled(key, MainActivity.inFront, MainActivity.homeKey,
+                                android.os.SystemClock.uptimeMillis() - MainActivity.homeKeyAt)) continue;
                         Log.i(TAG, "key " + key + " opens " + target);
                         main.post(() -> RemoteKeys.launch(ctx, target));
                     }

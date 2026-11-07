@@ -501,6 +501,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private java.util.Map<Integer, String> homeAppKeys = java.util.Collections.emptyMap();
     /** Home is in front (between onResume and onPause); KeyLogWatcher leaves vendor keys to Home then. */
     static volatile boolean inFront;
+    /** The vendor key Home last opened an app for, and when (SystemClock.uptimeMillis), for KeyLogWatcher. */
+    static volatile int homeKey;
+    static volatile long homeKeyAt;
     /** clock_format, for the race panel's session times (the TextClocks take it in onCreate). */
     private String clockFormat = "system";
     private java.util.Map<Integer, String> homeHoldAppKeys = java.util.Collections.emptyMap();
@@ -1529,7 +1532,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // "hold:" entries run here too or nowhere. Only while resumed: onPause releases Home's holds, and a DOWN
         // taken after that would arm one nothing releases.
         if (resumed && event.getKeyCode() >= 1000 && RemoteKeys.handle(this, event, homeAppKeys.get(event.getKeyCode()),
-                homeHoldAppKeys.get(event.getKeyCode()))) return true;
+                homeHoldAppKeys.get(event.getKeyCode()))) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                homeKeyAt = android.os.SystemClock.uptimeMillis();
+                homeKey = event.getKeyCode();
+            }
+            return true;
+        }
         if (handleSettingsKey(event)) return true;
         if (holdOk(event)) return true;
         if (tileMenuEnabled && !reordering && openPopup == null && cardPrompt == null
