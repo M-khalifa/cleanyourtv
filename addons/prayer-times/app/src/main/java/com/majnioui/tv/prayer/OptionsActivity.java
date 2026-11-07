@@ -104,7 +104,13 @@ public class OptionsActivity extends Activity {
         row("Morning recitation", "Surat Al-Baqarah every morning; ◀ ▶ change the time",
                 o -> o.morning ? o.morningTime : "Off", () -> put(Options.MORNING, !Options.load(this).morning),
                 this::stepMorningTime);
-        toggle("Friday Al-Kahf", "Two hours before Dhuhr on Fridays", Options.KAHF, o -> o.kahf);
+        row("   Morning volume", "◀ ▶ change it; the TV goes back to its own volume after", o -> o.morningVolume + "",
+                null, d -> stepInt(Options.MORNING_VOLUME, Options.load(this).morningVolume, d, 1, 0, maxVolume()));
+        toggle("Friday Al-Kahf", "On Fridays before the Dhuhr Azan", Options.KAHF, o -> o.kahf);
+        row("   Al-Kahf start", "◀ ▶ change it, in steps of 15 minutes", o -> Options.minutesBefore(o.kahfMinutes),
+                null, d -> stepInt(Options.KAHF_MINUTES, Options.load(this).kahfMinutes, d, 15, 15, 360));
+        row("   Al-Kahf volume", "◀ ▶ change it", o -> o.kahfVolume + "",
+                null, d -> stepInt(Options.KAHF_VOLUME, Options.load(this).kahfVolume, d, 1, 0, maxVolume()));
 
         section("Calendar");
         toggle("Ramadan wording", "In Ramadan, Fajr reads Suhoor ends and Maghrib reads Iftar", Options.RAMADAN,
@@ -219,6 +225,16 @@ public class OptionsActivity extends Activity {
         int now = Options.load(this).method, at = 0;
         for (int i = 0; i < ids.length; i++) if (ids[i] == now) at = i;
         put(Options.METHOD, ids[Math.floorMod(at + direction, ids.length)]);
+    }
+
+    /** One ◀ ▶ step of a stored number, kept between min and max. */
+    private void stepInt(String key, int now, int direction, int step, int min, int max) {
+        put(key, Options.clamp(now + step * direction, min, max));
+    }
+
+    private int maxVolume() {
+        android.media.AudioManager audio = getSystemService(android.media.AudioManager.class);
+        return audio == null ? 100 : audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC);
     }
 
     private void stepMorningTime(int direction) {

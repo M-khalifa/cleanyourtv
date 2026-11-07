@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
@@ -28,7 +29,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 
 /**
- * The Azan at the prayer time (WakePlan): takes the audio focus so whatever is playing pauses, plays
+ * The Azan at the prayer time (WakePlan): pauses whatever is playing (MediaPause) and takes the audio focus, plays
  * res/raw/azan.mp3 to the end as TV sound and keeps the prayer window on screen meanwhile. A TV in standby is
  * woken for it and put back to standby at the end unless someone pressed a key. Dismiss (OK or Back) stops it.
  */
@@ -47,6 +48,9 @@ public class AzanService extends Service {
     private MediaPlayer player;
     private AudioManager audio;
     private AudioFocusRequest focus;
+    /** What the Azan paused; played again at the end only on a TV that was already on and stays on. */
+    private MediaPause media;
+    private boolean resumeMedia;
     private WakePlan plan;
     private boolean keyPressed;
     /** When the window appeared; keys in the KEY_GUARD_MS after it are ignored. */
@@ -155,6 +159,8 @@ public class AzanService extends Service {
                 .setUsage(AudioAttributes.USAGE_MEDIA)
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build();
+        media = MediaPause.pauseAll(this);
+        resumeMedia = !woke;
         focus = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
                 .setAudioAttributes(attrs)
                 .setOnAudioFocusChangeListener(change -> { })
@@ -312,6 +318,11 @@ public class AzanService extends Service {
                 sleep = false;
                 EventLog.i(this, TAG, "a recitation is due in a few minutes: the TV stays on for it");
             }
+        }
+        if (media != null) {
+            // The screen too: turned off during the Azan, the TV is going to standby without this app's say.
+            if (resumeMedia && !sleep && getSystemService(PowerManager.class).isInteractive()) media.resume();
+            media = null;
         }
         if (sleep) SleepService.sleep(getApplicationContext());
         stopForeground(STOP_FOREGROUND_REMOVE);
