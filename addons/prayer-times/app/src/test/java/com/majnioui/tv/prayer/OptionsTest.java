@@ -40,6 +40,28 @@ public class OptionsTest {
     }
 
     @Test
+    public void recitationVolumesAndKahfStartAreStoredOverTheDefaults() {
+        Options base = new Options();
+        Map<String, Object> stored = new HashMap<>();
+        stored.put(Options.MORNING_VOLUME, 7);
+        stored.put(Options.KAHF_MINUTES, 45);
+        stored.put(Options.KAHF_VOLUME, "loud");
+        Options o = Options.apply(base, stored);
+        assertEquals(7, o.morningVolume);
+        assertEquals(45, o.kahfMinutes);
+        assertEquals("a value of the wrong type keeps the default", 5, o.kahfVolume);
+    }
+
+    @Test
+    public void kahfStartReadsInHoursAndMinutes() {
+        assertEquals("2 h before Dhuhr", Options.minutesBefore(120));
+        assertEquals("1 h 15 min before Dhuhr", Options.minutesBefore(75));
+        assertEquals("45 min before Dhuhr", Options.minutesBefore(45));
+        assertEquals(15, Options.clamp(0, 15, 360));
+        assertEquals(360, Options.clamp(400, 15, 360));
+    }
+
+    @Test
     public void noAzanWithoutASound() {
         Options o = new Options();
         o.azan = true;

@@ -1,6 +1,7 @@
 package com.majnioui.tv.prayer;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -50,6 +51,9 @@ public class AzanActivity extends Activity {
         boolean screenOff = !getSystemService(PowerManager.class).isInteractive();
         // Woken a few minutes ago by the early wake (the screen is on now), or about to be woken here.
         boolean earlyWoke = PreWakeActivity.consumeWoke(this, at);
+        // The early-wake clock covers the app the TV was showing before standby; Home comes up under it first, so
+        // that app is not what the TV shows (and plays) when the clock closes.
+        if (earlyWoke) showHome();
         PreWakeActivity.close(at);
         long late = System.currentTimeMillis() - at;
         String skip = prayer < 0 || prayer >= PrayerAlerts.NAMES.length ? "unknown prayer"
@@ -78,7 +82,22 @@ public class AzanActivity extends Activity {
             return;
         }
         Screen.turnOn(this);
-        new Handler(Looper.getMainLooper()).postDelayed(this::finish, HOLD_MS);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            // The firmware brings back the app from before standby as the screen turns on: Home instead, and
+            // whatever that app started playing meanwhile is paused.
+            showHome();
+            MediaPause.pauseAll(this);
+            finish();
+        }, HOLD_MS);
+    }
+
+    private void showHome() {
+        try {
+            startActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (ActivityNotFoundException e) {
+            android.util.Log.w("PrayerAlerts", "no Home to show", e);
+        }
     }
 
     @Override

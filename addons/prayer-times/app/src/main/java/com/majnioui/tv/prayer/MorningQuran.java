@@ -62,7 +62,7 @@ public class MorningQuran extends BroadcastReceiver {
         if (o.morning) {
             try {
                 long at = nextAt(LocalTime.parse(o.morningTime), now).toInstant().toEpochMilli();
-                arm(c, SLOT, at, null, null, -1, KIND_MORNING);
+                arm(c, SLOT, at, null, null, o.morningVolume, KIND_MORNING);
                 Log.i(TAG, "armed for " + java.time.Instant.ofEpochMilli(at));
             } catch (RuntimeException e) {
                 Log.e(TAG, "bad morning recitation time " + o.morningTime, e);
@@ -71,10 +71,9 @@ public class MorningQuran extends BroadcastReceiver {
         cancel(c, KAHF_SLOT);
         if (o.kahf && o.hasLocation()) {
             try {
-                long at = nextKahf(PrayerAlerts.times(c, now.getZone()), r.getInteger(R.integer.kahf_minutes_before_dhuhr),
-                        now).toInstant().toEpochMilli();
+                long at = nextKahf(PrayerAlerts.times(c, now.getZone()), o.kahfMinutes, now).toInstant().toEpochMilli();
                 arm(c, KAHF_SLOT, at, r.getString(R.string.kahf_url), r.getString(R.string.kahf_title),
-                        r.getInteger(R.integer.kahf_volume), KIND_KAHF);
+                        o.kahfVolume, KIND_KAHF);
                 Log.i(TAG, "Al-Kahf armed for " + java.time.Instant.ofEpochMilli(at));
             } catch (RuntimeException e) {
                 Log.e(TAG, "cannot work out Friday's Al-Kahf", e);
@@ -112,8 +111,7 @@ public class MorningQuran extends BroadcastReceiver {
                 kind = KIND_MORNING;
             }
             if (o.kahf && o.hasLocation()) {
-                long k = nextKahf(PrayerAlerts.times(c, now.getZone()),
-                        c.getResources().getInteger(R.integer.kahf_minutes_before_dhuhr), now).toInstant().toEpochMilli();
+                long k = nextKahf(PrayerAlerts.times(c, now.getZone()), o.kahfMinutes, now).toInstant().toEpochMilli();
                 if (due == 0 || k < due) {
                     due = k;
                     kind = KIND_KAHF;

@@ -16,7 +16,8 @@ final class Options {
     static final String PREFS = "settings";
     static final String PLACE = "place", LAT = "lat", LON = "lon", METHOD = "method", SCHOOL = "school",
             ALERTS = "alerts", AZAN = "azan", AZAN_PRAYER = "azan_", AZAN_URL = "azan_url", MORNING = "morning",
-            MORNING_TIME = "morning_time",
+            MORNING_TIME = "morning_time", MORNING_VOLUME = "morning_volume", KAHF_MINUTES = "kahf_minutes",
+            KAHF_VOLUME = "kahf_volume",
             KAHF = "kahf", RAMADAN = "ramadan", CARD_HIJRI = "card_hijri", HIJRI_OFFSET = "hijri_offset";
 
     /** Aladhan method ids offered on the TV, with the angles the offline fallback uses (isha < 0: minutes after Maghrib). */
@@ -38,6 +39,8 @@ final class Options {
     /** Where the Azan recording was last downloaded from. */
     String azanUrl = "";
     String morningTime = "06:00";
+    /** The recitations' volume (0 to the TV's maximum, 100 on TCL) and Al-Kahf's start before the Dhuhr Azan. */
+    int morningVolume = 2, kahfVolume = 5, kahfMinutes = 120;
     int hijriOffset;
 
     boolean hasLocation() {
@@ -85,7 +88,10 @@ final class Options {
         s.azanUrl = r.getString(R.string.azan_url);
         s.morning = r.getBoolean(R.bool.morning_quran);
         s.morningTime = r.getString(R.string.morning_quran_time);
+        s.morningVolume = r.getInteger(R.integer.morning_quran_volume);
         s.kahf = r.getBoolean(R.bool.kahf_friday);
+        s.kahfVolume = r.getInteger(R.integer.kahf_volume);
+        s.kahfMinutes = r.getInteger(R.integer.kahf_minutes_before_dhuhr);
         s.ramadan = r.getBoolean(R.bool.ramadan_wording);
         s.cardHijri = r.getBoolean(R.bool.card_hijri);
         s.hijriOffset = r.getInteger(R.integer.hijri_offset_days);
@@ -112,11 +118,24 @@ final class Options {
         s.azanUrl = str(stored, AZAN_URL, s.azanUrl);
         s.morning = bool(stored, MORNING, s.morning);
         s.morningTime = str(stored, MORNING_TIME, s.morningTime);
+        s.morningVolume = integer(stored, MORNING_VOLUME, s.morningVolume);
         s.kahf = bool(stored, KAHF, s.kahf);
+        s.kahfVolume = integer(stored, KAHF_VOLUME, s.kahfVolume);
+        s.kahfMinutes = integer(stored, KAHF_MINUTES, s.kahfMinutes);
         s.ramadan = bool(stored, RAMADAN, s.ramadan);
         s.cardHijri = bool(stored, CARD_HIJRI, s.cardHijri);
         s.hijriOffset = integer(stored, HIJRI_OFFSET, s.hijriOffset);
         return s;
+    }
+
+    /** "2 h before Dhuhr", "1 h 15 min before Dhuhr", "45 min before Dhuhr". */
+    static String minutesBefore(int minutes) {
+        int h = minutes / 60, m = minutes % 60;
+        return (h > 0 ? h + " h" : "") + (h > 0 && m > 0 ? " " : "") + (m > 0 || h == 0 ? m + " min" : "") + " before Dhuhr";
+    }
+
+    static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     /** Stores one changed value: Boolean, Integer or String. */
