@@ -59,6 +59,8 @@ public class HomeKeyService extends AccessibilityService {
     private boolean settingsPanel;
     /** consume_volume_keys: Volume Up/Down go to VolumeKeys instead of on to the firmware. */
     private boolean consumeVolumeKeys;
+    /** app_keys_from_log: opens app_keys from TCL's key log while key_filter is off; null otherwise. */
+    private KeyLogWatcher keyLog;
     /** app_keys, the same maps InputKeyService reads, for setups that run only this service. */
     private Map<Integer, String> appKeys = Collections.emptyMap();
     private Map<Integer, String> appScancodes = Collections.emptyMap();
@@ -150,6 +152,7 @@ public class HomeKeyService extends AccessibilityService {
         }
         if (gamepads != null) gamepads.stop();
         if (consumeVolumeKeys) VolumeKeys.stop();
+        if (keyLog != null) keyLog.stop();
         super.onDestroy();
     }
 
@@ -195,6 +198,12 @@ public class HomeKeyService extends AccessibilityService {
         appKeys = RemoteKeys.parseAppKeys(config.appKeys);
         appScancodes = RemoteKeys.parseAppScancodes(config.appKeys);
         RemoteKeys.applyKeyFilter(this, config.keyFilter);
+        if (keyLog != null) keyLog.stop();
+        keyLog = null;
+        if (!config.keyFilter && getResources().getBoolean(R.bool.app_keys_from_log)) {
+            keyLog = new KeyLogWatcher(this, appKeys);
+            keyLog.start();
+        }
         homeLongPressHome = config.homeLongPressHome;
         frontAppKeys = RemoteKeys.parseFrontAppKeys(config.appKeys);
         frontAppScancodes = RemoteKeys.parseFrontAppScancodes(config.appKeys);

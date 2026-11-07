@@ -499,6 +499,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     };
 
     private java.util.Map<Integer, String> homeAppKeys = java.util.Collections.emptyMap();
+    /** Home is in front (between onResume and onPause); KeyLogWatcher leaves vendor keys to Home then. */
+    static volatile boolean inFront;
     /** clock_format, for the race panel's session times (the TextClocks take it in onCreate). */
     private String clockFormat = "system";
     private java.util.Map<Integer, String> homeHoldAppKeys = java.util.Collections.emptyMap();
@@ -1176,6 +1178,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onResume() {
         super.onResume();
         resumed = true;
+        inFront = true;
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();
@@ -1398,6 +1401,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onPause() {
         super.onPause();
         resumed = false;
+        inFront = false;
         // No UP reaches a paused Home, so a vendor-key hold it saw go down would still open its app later.
         // Only Home's own share is dropped: a key service that saw the same DOWN keeps its hold.
         RemoteKeys.release(this);
