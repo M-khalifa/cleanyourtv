@@ -110,4 +110,7 @@
     <string name="last_opened">Naposledy otevřeno: %1$s</string>
     <string name="bluetooth">Bluetooth</string>
     <string name="game_live">Právě živě</string>
+    <string name="clock_format_system">Systém</string>
+    <string name="clock_format_12">12hodinové</string>
+    <string name="clock_format_24">24hodinové</string>
 </resources>

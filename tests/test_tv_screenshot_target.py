@@ -18,6 +18,12 @@ opened, so "nothing was captured" is observed rather than assumed.
 A folder that is not there is still made (#364) and an existing PNG is still overwritten; both are
 pinned here so the refusal cannot start refusing the runs the pages describe.
 
+Two shapes of a destination were left after that: a word that is only whitespace -
+`--screenshot "$SHOT"` with SHOT holding a space - was accepted and its pull wrote a file named
+`"   "`, and a trailing separator on a folder that is not there yet slipped past the isdir() check,
+after which that folder was made and the pull wrote to a folder name. Both are refused now, by the
+same judge, before the TV is opened; each has a test below.
+
 Run from the repository root: python3 -m unittest discover -s tests -v
 """
 import os
@@ -30,7 +36,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "tools" / "tv.py"
 SOURCE = SCRIPT.read_text(encoding="utf-8")
-PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 32
+PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 32 + b"IEND\xaeB`\x82"   # a complete PNG: signature, chunks, IEND
 
 STUB_DEVICE = '''\
 import os
@@ -62,7 +68,7 @@ class AdbDeviceTcp:
             raise DevicePathInvalidError("Cannot pull from an empty device path")
         self._note(f"pull {remote} -> {local}")
         with open(local, "wb") as f:
-            f.write(b"\\x89PNG\\r\\n\\x1a\\n" + b"0" * 32)
+            f.write(b"\\x89PNG\\r\\n\\x1a\\n" + b"0" * 32 + b"IEND\\xaeB`\\x82")
 
     def shell(self, command, read_timeout_s=None, **kwargs):
         self._note(f"shell {command}")
@@ -154,6 +160,20 @@ class ScreenshotTargetTest(unittest.TestCase):
 
     def test_a_folder_with_its_trailing_separator_is_refused(self):
         self.assertRefused(["--screenshot", str(self.shots) + os.sep], f"{self.shots}{os.sep} is a folder")
+
+    def test_a_trailing_separator_for_a_folder_that_is_not_there_is_refused(self):
+        # The isdir() check above only answers a folder that exists: with the separator on a name that is
+        # not there yet, os.path.abspath() drops it, the folder was made, and the run went on to
+        # `screencap` before the pull wrote to a name that is a folder.
+        target = os.path.join(str(self.work()), "newshots") + os.sep
+        self.assertRefused(["--screenshot", target], "ends with a separator", "01-home.png",
+                           "Nothing was captured.")
+
+    def test_a_blank_destination_is_refused(self):
+        # `--screenshot "$SHOT"` with SHOT holding a space: accepted, the pull wrote a file named "   ",
+        # and the run reported a screenshot at a path that is not the one the reader asked for.
+        err = self.assertRefused(["--screenshot", "   "], "blank")
+        self.assertIn("tv.py --screenshot", err, "a blank argument still carries the usage")
 
     def test_an_empty_destination_is_a_usage_error(self):
         # `--screenshot "$SHOT"` with SHOT never set: adb_shell's pull answered FileNotFoundError: ''.
