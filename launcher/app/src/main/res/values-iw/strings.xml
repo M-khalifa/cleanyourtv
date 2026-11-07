@@ -18,6 +18,7 @@
     <string name="good_night">לילה טוב</string>
     <string name="festival_dussehra_greeting">חג דוסרה שמח</string>
     <string name="festival_diwali_greeting">חג דיוואלי שמח</string>
+    <string name="festival_halloween_greeting">ליל כל הקדושים שמח</string>
     <string name="ethernet">רשת קווית</string>
     <string name="offline">אין חיבור לרשת</string>
     <string name="not_available">לא זמין בטלוויזיה זו</string>
@@ -161,4 +162,7 @@
     <string name="widget_weather">מזג אוויר</string>
     <string name="widget_adb">אזהרת ניפוי באגים</string>
     <string name="widget_memory">זיכרון ואחסון</string>
+    <string name="clock_format_system">מערכת</string>
+    <string name="clock_format_12">12 שעות</string>
+    <string name="clock_format_24">24 שעות</string>
 </resources>
