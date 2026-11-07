@@ -141,6 +141,13 @@
          the helper's own. Leave it off where a tap is one step. A theme can set it ("consume_volume_keys"). -->
     <bool name="consume_volume_keys">false</bool>
 
+    <!-- With key_filter false: open app_keys (keycode entries) from the key presses TCL's system server logs, so a
+         remote's app buttons work in every app while the firmware still auto-repeats a held volume key, which any
+         key filter stops on TCL Android 12. Needs READ_LOGS, granted once over adb
+         (adb shell pm grant com.gathin.tvhome android.permission.READ_LOGS); Android then asks "Allow Home to
+         access all device logs?" once per log session, after each reboot or launcher update. TCL only. -->
+    <bool name="app_keys_from_log">false</bool>
+
     <!-- Vendor source numbers for the Inputs menu, "HW<n>=<number>" by the framework input id's last part
          (`tools/tv.py 'dumpsys tv_input'` lists them). A mapped input opens by sending input_action with the
          number as the int extra "input"; "HW<n>=-" leaves a port the board reports but the set does not have
