@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
@@ -319,7 +320,8 @@ public class AzanService extends Service {
             }
         }
         if (media != null) {
-            if (resumeMedia && !sleep) media.resume(this);
+            // The screen too: turned off during the Azan, the TV is going to standby without this app's say.
+            if (resumeMedia && !sleep && getSystemService(PowerManager.class).isInteractive()) media.resume();
             media = null;
         }
         if (sleep) SleepService.sleep(getApplicationContext());

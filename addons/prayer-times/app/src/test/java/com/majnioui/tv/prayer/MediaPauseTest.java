@@ -18,6 +18,14 @@ public class MediaPauseTest {
     }
 
     @Test
+    public void onlyAnUntouchedPauseIsResumed() {
+        assertTrue(MediaPause.stillOurPause(PlaybackState.STATE_PAUSED, 10_200, 10_000));
+        assertFalse("paused again by the user later", MediaPause.stillOurPause(PlaybackState.STATE_PAUSED, 40_000, 10_000));
+        assertFalse("stopped meanwhile", MediaPause.stillOurPause(PlaybackState.STATE_STOPPED, 10_200, 10_000));
+        assertFalse("already playing", MediaPause.stillOurPause(PlaybackState.STATE_PLAYING, 10_200, 10_000));
+    }
+
+    @Test
     public void stoppedOrPausedSessionsAreLeftAlone() {
         assertFalse(MediaPause.playing(PlaybackState.STATE_PAUSED));
         assertFalse(MediaPause.playing(PlaybackState.STATE_STOPPED));

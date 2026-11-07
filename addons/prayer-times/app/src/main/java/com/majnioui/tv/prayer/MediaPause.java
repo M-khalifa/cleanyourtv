@@ -17,13 +17,17 @@ import java.util.List;
  * Pauses what is playing for the Azan and plays it again after. The audio focus alone pauses only apps that honour
  * a transient loss (YouTube); Shorts, Disney+ and most ExoPlayer apps duck or ignore it. So every playing media
  * session is paused through RevivalService, the notification listener approved over adb that may list them, and a
- * media pause key goes to the app that takes media keys, for players with no session.
+ * media pause key goes to the app that takes media keys, for players with no session. Only sessions are played again:
+ * a key pause cannot tell which player it reached, and a play key could start an app that was idle.
  */
 final class MediaPause {
     private static final String TAG = "PrayerAlerts";
 
+    /** A session changed later than this after the pause was changed by someone else: it is not played again. */
+    private static final long SETTLE_MS = 5_000L;
+
     private final List<MediaController> paused = new ArrayList<>();
-    private boolean keyPaused;
+    private long pausedAt;
 
     /** A session in this state is producing sound, or about to. */
     static boolean playing(int state) {
@@ -34,6 +38,7 @@ final class MediaPause {
     /** Pauses every playing session and, if any sound is still playing after that, sends a media pause key. */
     static MediaPause pauseAll(Context ctx) {
         MediaPause p = new MediaPause();
+        p.pausedAt = SystemClock.elapsedRealtime();
         MediaSessionManager sessions = ctx.getSystemService(MediaSessionManager.class);
         if (sessions != null) {
             try {
@@ -48,30 +53,30 @@ final class MediaPause {
             }
         }
         AudioManager audio = ctx.getSystemService(AudioManager.class);
-        if (audio != null && audio.isMusicActive()) {
-            sendKey(audio, KeyEvent.KEYCODE_MEDIA_PAUSE);
-            p.keyPaused = true;
-        }
-        EventLog.i(ctx, TAG, "paused for the Azan: " + p.paused.size() + " session(s)"
-                + (p.keyPaused ? " and a media key" : ""));
+        boolean key = audio != null && audio.isMusicActive();
+        if (key) sendKey(audio, KeyEvent.KEYCODE_MEDIA_PAUSE);
+        EventLog.i(ctx, TAG, "paused for the Azan: " + p.paused.size() + " session(s)" + (key ? " and a media key" : ""));
         return p;
     }
 
-    /** Plays again what pauseAll paused. */
-    void resume(Context ctx) {
+    /** Whether a session paused at {@code pausedAt} still shows only that pause: paused, last changed around then. */
+    static boolean stillOurPause(int state, long lastUpdate, long pausedAt) {
+        return state == PlaybackState.STATE_PAUSED && lastUpdate <= pausedAt + SETTLE_MS;
+    }
+
+    /** Plays again the sessions pauseAll paused that nobody paused, stopped or played since. */
+    void resume() {
         for (MediaController c : paused) {
             try {
-                c.getTransportControls().play();
+                PlaybackState s = c.getPlaybackState();
+                if (s != null && stillOurPause(s.getState(), s.getLastPositionUpdateTime(), pausedAt)) {
+                    c.getTransportControls().play();
+                }
             } catch (RuntimeException e) {
                 Log.w(TAG, "could not resume " + c.getPackageName(), e);
             }
         }
-        if (keyPaused && paused.isEmpty()) {
-            AudioManager audio = ctx.getSystemService(AudioManager.class);
-            if (audio != null) sendKey(audio, KeyEvent.KEYCODE_MEDIA_PLAY);
-        }
         paused.clear();
-        keyPaused = false;
     }
 
     private static void sendKey(AudioManager audio, int code) {
