@@ -8,7 +8,7 @@ import java.util.Map;
 
 import io.github.mkhalifa.miracast.rtsp.RtspMessage;
 
-/** WFD sink side of the RTSP exchange (M1..M8, M13, M16) without any I/O. */
+/** WFD sink side of the RTSP exchange (M1..M8, M13, M16) without any I/O; safe to call from several threads. */
 public final class WfdSinkProtocol {
     public static final String DEFAULT_URL = "rtsp://localhost/wfd1.0";
 
@@ -37,38 +37,44 @@ public final class WfdSinkProtocol {
     private String videoFormat;
     private boolean playing;
     private boolean tornDown;
+    private boolean sourceTeardown;
 
     public WfdSinkProtocol(WfdCapabilities caps, Listener listener) {
         this.caps = caps;
         this.listener = listener;
     }
 
-    public String session() {
+    public synchronized String session() {
         return session;
     }
 
-    public int timeoutSeconds() {
+    public synchronized int timeoutSeconds() {
         return timeoutSeconds;
     }
 
-    public String audioCodec() {
+    public synchronized String audioCodec() {
         return audioCodec;
     }
 
-    public String videoFormat() {
+    public synchronized String videoFormat() {
         return videoFormat;
     }
 
-    public String presentationUrl() {
+    public synchronized String presentationUrl() {
         return presentationUrl;
     }
 
-    public boolean isPlaying() {
+    public synchronized boolean isPlaying() {
         return playing;
     }
 
+    /** True after the source sent TEARDOWN itself: the caller ends the session once the reply is out. */
+    public synchronized boolean sourceTornDown() {
+        return sourceTeardown;
+    }
+
     /** Handles one message from the source and returns what the sink sends back, in order. */
-    public List<RtspMessage> handle(RtspMessage in) {
+    public synchronized List<RtspMessage> handle(RtspMessage in) {
         List<RtspMessage> out = new ArrayList<>();
         if (in.isResponse()) {
             onResponse(in, out);
@@ -89,9 +95,15 @@ public final class WfdSinkProtocol {
                 out.add(RtspMessage.response(200, "OK", cs));
                 onSetParameter(in, out);
                 break;
-            default:
-                listener.onLog("unhandled request " + in.startLine);
+            case "TEARDOWN":
+                listener.onLog("TEARDOWN from source");
                 out.add(RtspMessage.response(200, "OK", cs));
+                tornDown = true;
+                sourceTeardown = true;
+                break;
+            default:
+                listener.onLog("unsupported request " + in.startLine);
+                out.add(RtspMessage.response(501, "Not Implemented", cs));
                 break;
         }
         return out;
@@ -178,7 +190,12 @@ public final class WfdSinkProtocol {
         }
         switch (method) {
             case "SETUP":
-                parseSession(in.get("Session"));
+                if (!parseSession(in.get("Session"))) {
+                    listener.onLog("SETUP answer without a usable Session: " + in.get("Session"));
+                    tornDown = true;
+                    listener.onTeardown("SETUP without session");
+                    break;
+                }
                 out.add(withSession(request("PLAY", presentationUrl)));
                 break;
             case "PLAY":
@@ -201,9 +218,11 @@ public final class WfdSinkProtocol {
         }
     }
 
-    private void parseSession(String s) {
-        if (s == null) return;
+    /** False when the header is missing or has no session identifier. */
+    private boolean parseSession(String s) {
+        if (s == null) return false;
         String[] parts = s.split(";");
+        if (parts.length == 0 || parts[0].trim().isEmpty()) return false;
         session = parts[0].trim();
         for (int i = 1; i < parts.length; i++) {
             String t = parts[i].trim().toLowerCase(Locale.ROOT);
@@ -214,15 +233,16 @@ public final class WfdSinkProtocol {
                 listener.onLog("bad session timeout " + t);
             }
         }
+        return true;
     }
 
     /** M13: asks the source for an IDR picture. */
-    public RtspMessage idrRequest() {
+    public synchronized RtspMessage idrRequest() {
         return withSession(request("SET_PARAMETER", presentationUrl)).body("wfd_idr_request\r\n", "text/parameters");
     }
 
     /** M8 sent by the sink. */
-    public RtspMessage teardown() {
+    public synchronized RtspMessage teardown() {
         return withSession(request("TEARDOWN", presentationUrl));
     }
 

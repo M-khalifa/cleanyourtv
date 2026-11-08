@@ -38,7 +38,7 @@ import io.github.mkhalifa.miracast.mice.WscVendorElement;
  * join detection and receiver launch. All state lives on one HandlerThread.
  */
 public final class HelperCore {
-    public static final int VERSION = 4;
+    public static final int VERSION = 5;
     public static final String APP = "io.github.mkhalifa.miracast";
     static final String DEFAULT_NAME = "KhalifaTV";
     static final int CONTROL_PORT = 7236;
@@ -84,6 +84,8 @@ public final class HelperCore {
     private int groupMissing;
     private String groupIface;
     private boolean groupUp;
+    /** A reset hid whether the group still exists; the next poll that finds none runs the group-down cleanup. */
+    private boolean groupStale;
     private final Set<String> clients = new HashSet<>();
     private final Map<String, Long> pendingJoins = new HashMap<>();
     private final Set<String> launchedIps = new HashSet<>();
@@ -253,7 +255,7 @@ public final class HelperCore {
             if (groupUp && !approverAttached && !approverPending) addApprover();
             return;
         }
-        if (!cleanupDone && groupUp && !removePending) {
+        if (!cleanupDone && groupUp && !removePending && clients.isEmpty() && !sessionActive) {
             removePending = true;
             removeApprover();
             p2p.removeGroup(ch, listener("removeGroup (listen mode)", ok -> {
@@ -283,10 +285,12 @@ public final class HelperCore {
         removePending = false;
         cleanupDone = false;
         lastRearm = 0;
+        groupStale = groupStale || groupUp;
         groupUp = false;
         groupMissing = 0;
         clients.clear();
         pendingJoins.clear();
+        launchedIps.clear();
     }
 
     private void shutdownP2p() {
@@ -445,7 +449,9 @@ public final class HelperCore {
     private void onGroup(WifiP2pGroup g) {
         boolean up = g != null && g.isGroupOwner();
         if (g != null && !g.isGroupOwner()) HelperLog.i("in a group as client, ignoring: " + g.getNetworkName());
-        if (up != groupUp) {
+        boolean lostDuringReset = groupStale && !up;
+        groupStale = false;
+        if (up != groupUp || lostDuringReset) {
             HelperLog.i(up ? "group up iface=" + g.getInterface() + " ssid=" + g.getNetworkName() : "group down");
             groupUp = up;
             groupIface = up ? g.getInterface() : null;

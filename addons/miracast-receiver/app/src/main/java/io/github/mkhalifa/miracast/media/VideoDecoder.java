@@ -107,7 +107,7 @@ public final class VideoDecoder {
                 spsLog = s;
                 SessionLog.i("SPS " + s);
             }
-            if (info != null && (info.width != spsWidth || info.height != spsHeight)) {
+            if (needsNewDecoder(info, spsWidth, spsHeight)) {
                 if (codec != null) SessionLog.i("video size " + spsWidth + "x" + spsHeight + " -> "
                         + info.width + "x" + info.height + ": new decoder");
                 spsWidth = info.width;
@@ -155,12 +155,23 @@ public final class VideoDecoder {
         feed();
     }
 
+    /** True when a parsed SPS announces a picture size other than the one the decoder was set up for. */
+    static boolean needsNewDecoder(H264.SpsInfo info, int width, int height) {
+        return info != null && (info.width != width || info.height != height);
+    }
+
+    /** Playout delay video frames currently get; audio is held back by the same amount. */
+    public synchronized long playoutDelayMs() {
+        return paced ? pacer.delayMs() : 0;
+    }
+
     /** Called after packet loss: keep decoding (the decoder conceals the damage) until the requested IDR heals it. */
     public synchronized void onCorruption() {
         corrupted++;
     }
 
     private boolean createCodec() {
+        MediaCodec c = null;
         try {
             MediaFormat f = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC,
                     spsWidth > 0 ? spsWidth : 1920, spsHeight > 0 ? spsHeight : 1080);
@@ -169,7 +180,7 @@ public final class VideoDecoder {
             f.setInteger(MediaFormat.KEY_MAX_WIDTH, maxWidth);
             f.setInteger(MediaFormat.KEY_MAX_HEIGHT, maxHeight);
             f.setInteger(MediaFormat.KEY_PRIORITY, 0);
-            MediaCodec c = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
+            c = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
             MediaCodecInfo.CodecCapabilities caps = c.getCodecInfo().getCapabilitiesForType(MediaFormat.MIMETYPE_VIDEO_AVC);
             boolean lowLatency = caps.isFeatureSupported(MediaCodecInfo.CodecCapabilities.FEATURE_LowLatency);
             if (lowLatency) f.setInteger(MediaFormat.KEY_LOW_LATENCY, 1);
@@ -248,6 +259,13 @@ public final class VideoDecoder {
             return true;
         } catch (Exception e) {
             SessionLog.w("video decoder setup failed", e);
+            if (c != null && c != codec) {
+                try {
+                    c.release();
+                } catch (RuntimeException re) {
+                    SessionLog.w("video decoder release after failed setup failed", re);
+                }
+            }
             releaseCodec();
             return false;
         }

@@ -2,6 +2,7 @@ package io.github.mkhalifa.miracast.mice;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -29,6 +30,7 @@ public final class MiceServer {
         private volatile byte[] sourceId;
         private volatile byte[] friendlyNameRaw;
         private volatile boolean closed;
+        private boolean established;
 
         Link(Socket socket) {
             this.socket = socket;
@@ -39,7 +41,8 @@ public final class MiceServer {
         }
 
         /** RTSP is up: the establishment timer no longer applies. */
-        public void rtspEstablished() {
+        public synchronized void rtspEstablished() {
+            established = true;
             try {
                 socket.setSoTimeout(0);
             } catch (IOException e) {
@@ -77,13 +80,33 @@ public final class MiceServer {
             return !closed && !socket.isClosed();
         }
 
+        /** Before each read: the timeout is what is left of the establishment deadline. */
+        private synchronized void armTimeout(long deadline) throws IOException {
+            if (established) return;
+            long left = deadline - System.currentTimeMillis();
+            if (left <= 0) throw new SocketTimeoutException("establishment deadline passed");
+            socket.setSoTimeout((int) left);
+        }
+
         void serve() {
             String peer = remote();
             String endReason = "connection closed";
+            long deadline = System.currentTimeMillis() + establishMs;
             try {
-                socket.setSoTimeout(ESTABLISH_MS);
                 socket.setTcpNoDelay(true);
-                DataInputStream in = new DataInputStream(socket.getInputStream());
+                DataInputStream in = new DataInputStream(new FilterInputStream(socket.getInputStream()) {
+                    @Override
+                    public int read() throws IOException {
+                        armTimeout(deadline);
+                        return super.read();
+                    }
+
+                    @Override
+                    public int read(byte[] b, int off, int len) throws IOException {
+                        armTimeout(deadline);
+                        return super.read(b, off, len);
+                    }
+                });
                 while (!closed) {
                     int size = in.readUnsignedShort();
                     if (size < 4 || size > 65535) throw new IOException("bad MICE size " + size);
@@ -136,12 +159,18 @@ public final class MiceServer {
     }
 
     private final Listener listener;
+    private final int establishMs;
     private volatile boolean running;
     private volatile ServerSocket server;
     private volatile Link active;
 
     public MiceServer(Listener listener) {
+        this(listener, ESTABLISH_MS);
+    }
+
+    MiceServer(Listener listener, int establishMs) {
         this.listener = listener;
+        this.establishMs = establishMs;
     }
 
     public boolean isListening() {

@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
@@ -16,10 +17,12 @@ import java.util.Map;
 import io.github.mkhalifa.miracast.media.AudioRenderer;
 import io.github.mkhalifa.miracast.media.RtpPacket;
 import io.github.mkhalifa.miracast.media.RtpReorder;
+import io.github.mkhalifa.miracast.media.RtpSourceLock;
 import io.github.mkhalifa.miracast.media.TsDemuxer;
 import io.github.mkhalifa.miracast.media.VideoDecoder;
 import io.github.mkhalifa.miracast.rtsp.RtspMessage;
 import io.github.mkhalifa.miracast.rtsp.RtspParser;
+import io.github.mkhalifa.miracast.wfd.IdrGate;
 import io.github.mkhalifa.miracast.wfd.WfdCapabilities;
 import io.github.mkhalifa.miracast.wfd.WfdSinkProtocol;
 
@@ -35,6 +38,13 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
 
     private static final int RTP_WINDOW = 128;
     private static final long IDR_MIN_INTERVAL_MS = 1_000;
+    /** Wakes the blocked RTSP read so the loop sees a session that ended elsewhere. */
+    private static final int RTSP_READ_TIMEOUT_MS = 2_000;
+    /** From RTSP connect to the first PLAY acknowledgement. */
+    static final long NEGOTIATE_MS = 30_000;
+    /** No RTP while playing for this long: the link is gone. */
+    static final long RTP_IDLE_MS = 30_000;
+    private static final long STREAMING_MS = 3_000;
 
     public final String source;
     public final int port;
@@ -51,7 +61,12 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
     private volatile boolean stopping;
     private volatile boolean ended;
     private volatile long lastRtspRx;
-    private volatile long lastIdr;
+    private volatile long connectedAt;
+    private volatile long lastRtpRx;
+    private volatile boolean played;
+    private volatile String pendingEnd;
+    private volatile Thread rtpThread;
+    private final IdrGate idrGate = new IdrGate(IDR_MIN_INTERVAL_MS);
     private volatile int videoPid = -1;
 
     public WfdSession(String source, int port, String via, long connectTimeoutMs, Callback cb) {
@@ -75,7 +90,11 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
             SessionLog.w("RTP socket bind failed", e);
         }
         new Thread(this::rtspLoop, "rtsp").start();
-        if (udp != null) new Thread(this::rtpLoop, "rtp").start();
+        if (udp != null) {
+            Thread t = new Thread(this::rtpLoop, "rtp");
+            rtpThread = t;
+            t.start();
+        }
     }
 
     public void setSurface(Surface s) {
@@ -94,7 +113,9 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
         new Thread(() -> {
             Socket s = socket;
             if (s != null && protocol.session() != null) {
-                send(protocol.teardown());
+                synchronized (writeLock) {
+                    send(protocol.teardown());
+                }
                 long until = System.currentTimeMillis() + 1_000;
                 while (!ended && System.currentTimeMillis() < until) {
                     try {
@@ -115,16 +136,30 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
             end("could not connect to " + source + ":" + port);
             return;
         }
-        socket = s;
+        synchronized (this) {
+            if (ended || stopping) {
+                SessionLog.i("session ended while connecting: closing the new RTSP socket");
+                closeQuietly(s);
+                return;
+            }
+            socket = s;
+        }
         state("RTSP connected to " + source + ":" + port);
-        lastRtspRx = System.currentTimeMillis();
+        connectedAt = System.currentTimeMillis();
+        lastRtspRx = connectedAt;
         new Thread(this::watchdog, "rtsp-watchdog").start();
         RtspParser parser = new RtspParser();
         byte[] buf = new byte[16 * 1024];
         try {
+            s.setSoTimeout(RTSP_READ_TIMEOUT_MS);
             InputStream in = s.getInputStream();
             while (!ended) {
-                int n = in.read(buf);
+                int n;
+                try {
+                    n = in.read(buf);
+                } catch (SocketTimeoutException e) {
+                    continue;
+                }
                 if (n < 0) {
                     end("source closed RTSP");
                     return;
@@ -132,19 +167,34 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
                 lastRtspRx = System.currentTimeMillis();
                 for (RtspMessage m : parser.feed(buf, 0, n)) {
                     SessionLog.i("<<< " + m);
-                    for (RtspMessage r : protocol.handle(m)) send(r);
+                    synchronized (writeLock) {
+                        for (RtspMessage r : protocol.handle(m)) send(r);
+                    }
+                    String why = protocol.sourceTornDown() ? "TEARDOWN from source" : pendingEnd;
+                    if (why != null) {
+                        end(why);
+                        return;
+                    }
                 }
             }
-        } catch (IOException | RtspParser.ProtocolException e) {
+        } catch (IOException | RtspParser.ProtocolException | RuntimeException e) {
             if (!ended) SessionLog.w("RTSP read failed", e);
             end("RTSP error: " + e.getMessage());
+        }
+    }
+
+    private static void closeQuietly(Socket s) {
+        try {
+            s.close();
+        } catch (IOException e) {
+            SessionLog.w("socket close failed", e);
         }
     }
 
     private Socket connect() {
         long deadline = System.currentTimeMillis() + connectDeadlineMs;
         int attempt = 0;
-        while (!stopping && System.currentTimeMillis() < deadline) {
+        while (!stopping && !ended && System.currentTimeMillis() < deadline) {
             attempt++;
             Socket s = new Socket();
             try {
@@ -178,13 +228,24 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
                 SessionLog.w("watchdog interrupted", e);
                 return;
             }
-            long limit = 2_000L * Math.max(10, protocol.timeoutSeconds());
-            if (protocol.session() != null && System.currentTimeMillis() - lastRtspRx > limit) {
-                SessionLog.i("no RTSP message for " + limit + " ms");
-                stop("keep-alive timeout");
+            String why = timeoutReason(System.currentTimeMillis(), connectedAt, lastRtspRx, lastRtpRx,
+                    protocol.session() != null, played, protocol.isPlaying(), protocol.timeoutSeconds());
+            if (why != null) {
+                SessionLog.i("watchdog: " + why);
+                stop(why);
                 return;
             }
         }
+    }
+
+    /** Why the watchdog should end the session now, or null. */
+    static String timeoutReason(long now, long connectedAt, long lastRtspRx, long lastRtpRx, boolean hasSession,
+                                boolean played, boolean playing, int timeoutSeconds) {
+        long keepAlive = 2_000L * Math.max(10, timeoutSeconds);
+        if (hasSession && now - lastRtspRx > keepAlive) return "keep-alive timeout";
+        if (!played && now - connectedAt > NEGOTIATE_MS) return "negotiation timeout";
+        if (playing && now - lastRtpRx > RTP_IDLE_MS) return "no RTP for " + RTP_IDLE_MS / 1000 + " s";
+        return null;
     }
 
     private void send(RtspMessage m) {
@@ -216,8 +277,12 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
 
             @Override
             public void onPes(int pid, int type, int streamId, long ptsUs, byte[] data, int len) {
-                if (type == TsDemuxer.TYPE_H264) video.onAccessUnit(data, len, ptsUs);
-                else if (type == TsDemuxer.TYPE_LPCM) audio.onLpcm(data, len);
+                if (type == TsDemuxer.TYPE_H264) {
+                    video.onAccessUnit(data, len, ptsUs);
+                    return;
+                }
+                audio.setVideoDelayMs(video.playoutDelayMs());
+                if (type == TsDemuxer.TYPE_LPCM) audio.onLpcm(data, len);
                 else if (type == TsDemuxer.TYPE_AAC_ADTS) audio.onAac(data, len, ptsUs);
             }
 
@@ -235,8 +300,9 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
         });
         RtpReorder reorder = new RtpReorder(RTP_WINDOW, new RtpReorder.Sink() {
             @Override
-            public void onPayload(byte[] data, int off, int len) {
+            public void onPayload(byte[] data, int off, int len, boolean marker) {
                 demux.feed(data, off, len);
+                if (marker) demux.onRtpMarker();
             }
 
             @Override
@@ -248,6 +314,7 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
         byte[] buf = new byte[65536];
         DatagramPacket p = new DatagramPacket(buf, buf.length);
         RtpPacket rtp = new RtpPacket();
+        RtpSourceLock lock = new RtpSourceLock();
         long packets = 0;
         long bytes = 0;
         long lastStats = System.currentTimeMillis();
@@ -258,46 +325,70 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
                 p.setLength(buf.length);
                 d.receive(p);
             } catch (SocketTimeoutException e) {
-                reorder.flush();
+                try {
+                    reorder.flush();
+                    sendHeldIdr();
+                } catch (RuntimeException re) {
+                    SessionLog.w("RTP flush failed", re);
+                }
                 continue;
             } catch (IOException e) {
                 if (!ended) SessionLog.w("RTP receive failed", e);
                 break;
             }
-            if (packets == 0) {
-                SessionLog.i("first RTP packet from " + p.getAddress().getHostAddress() + " len=" + p.getLength());
-                state("streaming");
-            }
-            packets++;
-            bytes += p.getLength();
-            if (!rtp.parse(buf, 0, p.getLength())) continue;
-            reorder.push(rtp.sequence, buf, rtp.payloadOffset, rtp.payloadLength);
-            if (rtp.marker) {
-                // RTP timestamp is the sender's clock at send time: its spread against arrival is network jitter.
-                long lag = System.nanoTime() - rtp.timestamp * 1_000_000L / 90;
-                netMinNs = Math.min(netMinNs, lag);
-                netMaxNs = Math.max(netMaxNs, lag);
-                if (reorder.idle()) demux.onRtpMarker();
-            }
-            long now = System.currentTimeMillis();
-            if (now - lastStats >= 10_000) {
-                long net = netMinNs > netMaxNs ? -1 : (netMaxNs - netMinNs) / 1_000_000L;
-                SessionLog.i("rtp packets=" + packets + " bytes=" + bytes + " lost=" + reorder.lost() + " late="
-                        + reorder.late() + " netJitter=" + net + "ms " + demux.stats() + "; " + video.stats()
-                        + "; " + audio.stats());
-                netMinNs = Long.MAX_VALUE;
-                netMaxNs = Long.MIN_VALUE;
-                lastStats = now;
+            try {
+                if (!rtp.parse(buf, 0, p.getLength())) continue;
+                Socket rtsp = socket;
+                InetAddress peer = rtsp == null ? null : rtsp.getInetAddress();
+                if (!lock.accept(p.getAddress(), peer, rtp.ssrc)) continue;
+                lastRtpRx = System.currentTimeMillis();
+                if (packets == 0) {
+                    SessionLog.i("first RTP packet from " + p.getAddress().getHostAddress() + " len=" + p.getLength());
+                    state("streaming");
+                }
+                packets++;
+                bytes += p.getLength();
+                reorder.push(rtp.sequence, buf, rtp.payloadOffset, rtp.payloadLength, rtp.marker);
+                if (rtp.marker) {
+                    // RTP timestamp is the sender's clock at send time: its spread against arrival is network jitter.
+                    long lag = System.nanoTime() - rtp.timestamp * 1_000_000L / 90;
+                    netMinNs = Math.min(netMinNs, lag);
+                    netMaxNs = Math.max(netMaxNs, lag);
+                }
+                sendHeldIdr();
+                long now = System.currentTimeMillis();
+                if (now - lastStats >= 10_000) {
+                    long net = netMinNs > netMaxNs ? -1 : (netMaxNs - netMinNs) / 1_000_000L;
+                    SessionLog.i("rtp packets=" + packets + " bytes=" + bytes + " lost=" + reorder.lost() + " late="
+                            + reorder.late() + " rejected=" + lock.rejected() + " netJitter=" + net + "ms "
+                            + demux.stats() + "; " + video.stats() + "; " + audio.stats());
+                    netMinNs = Long.MAX_VALUE;
+                    netMaxNs = Long.MIN_VALUE;
+                    lastStats = now;
+                }
+            } catch (RuntimeException e) {
+                SessionLog.w("RTP packet dropped", e);
             }
         }
     }
 
     private void requestIdr(String why) {
-        long now = System.currentTimeMillis();
-        if (now - lastIdr < IDR_MIN_INTERVAL_MS || protocol.session() == null || ended) return;
-        lastIdr = now;
+        if (protocol.session() == null || ended) return;
+        if (idrGate.request(System.currentTimeMillis())) sendIdr(why);
+    }
+
+    /** Sends the IDR request the rate limit held back, once its interval has passed. */
+    private void sendHeldIdr() {
+        if (idrGate.due(System.currentTimeMillis()) && protocol.session() != null && !ended) sendIdr("held back request");
+    }
+
+    private void sendIdr(String why) {
         SessionLog.i("IDR request: " + why);
-        new Thread(() -> send(protocol.idrRequest()), "idr").start();
+        new Thread(() -> {
+            synchronized (writeLock) {
+                send(protocol.idrRequest());
+            }
+        }, "idr").start();
     }
 
     private void state(String s) {
@@ -319,6 +410,15 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
         }
         DatagramSocket d = udp;
         if (d != null) d.close();
+        Thread rtp = rtpThread;
+        if (rtp != null && rtp != Thread.currentThread()) {
+            try {
+                rtp.join(1_000);
+            } catch (InterruptedException e) {
+                SessionLog.w("RTP worker join interrupted", e);
+                Thread.currentThread().interrupt();
+            }
+        }
         video.release();
         audio.release();
         cb.onSessionEnded(this, reason);
@@ -326,6 +426,11 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
 
     public boolean isEnded() {
         return ended;
+    }
+
+    /** Playing with RTP received in the last few seconds; a session that is not can be replaced by a new start. */
+    public boolean isStreaming() {
+        return !ended && protocol.isPlaying() && System.currentTimeMillis() - lastRtpRx < STREAMING_MS;
     }
 
     // ---- WfdSinkProtocol.Listener ----
@@ -347,6 +452,8 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
 
     @Override
     public void onPlaying() {
+        lastRtpRx = System.currentTimeMillis();
+        played = true;
         state("PLAY acknowledged");
     }
 
@@ -357,7 +464,8 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
 
     @Override
     public void onTeardown(String reason) {
-        end(reason);
+        // Called inside protocol.handle(): the rtsp loop ends the session once the protocol lock is released.
+        pendingEnd = reason;
     }
 
     // ---- VideoDecoder.Callback ----

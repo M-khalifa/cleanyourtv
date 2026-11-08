@@ -261,6 +261,68 @@ public class TsDemuxerTest {
     }
 
     @Test
+    public void framesEndAtNextFrameStartUntilMarkersAreLearned() {
+        Got g = new Got();
+        TsDemuxer d = new TsDemuxer(g);
+        byte[] psi = concat(List.of(pat(), pmt()));
+        d.feed(psi, 0, psi.length);
+        for (int i = 0; i < TsDemuxer.ALIGN_FRAMES; i++) sendFrame(d, i, true);
+        assertEquals("each frame waits for the next frame start", TsDemuxer.ALIGN_FRAMES - 1, g.pes.size());
+        assertTrue(d.stats().contains("frameEndByMarker=off"));
+    }
+
+    @Test
+    public void frameContinuingAfterItsMarkerIsReportedAsDamage() {
+        Got g = new Got();
+        TsDemuxer d = new TsDemuxer(g);
+        byte[] psi = concat(List.of(pat(), pmt()));
+        d.feed(psi, 0, psi.length);
+        for (int i = 0; i <= TsDemuxer.ALIGN_FRAMES; i++) sendFrame(d, i, true);
+        List<byte[]> pk = packetize(VIDEO_PID, pes(0xE0, 300_000, new byte[500], false), null);
+        assertEquals(3, pk.size());
+        d.feed(pk.get(0), 0, 188);
+        d.onRtpMarker();
+        assertEquals(0, g.discontinuities);
+        d.feed(pk.get(1), 0, 188);
+        d.feed(pk.get(2), 0, 188);
+        assertEquals("rest of the frame flags the damage once", 1, g.discontinuities);
+        assertTrue(d.stats().contains("frameEndByMarker=off"));
+    }
+
+    @Test
+    public void shortPmtSectionIsIgnored() {
+        Got g = new Got();
+        TsDemuxer d = new TsDemuxer(g);
+        byte[] p = pat();
+        d.feed(p, 0, p.length);
+        byte[] section = {0, 0x02, (byte) 0xB0, 0x05, 0, 1, (byte) 0xC1, 0, 0};
+        byte[] pmt = packet(PMT_PID, true, section, 0, section.length, null);
+        d.feed(pmt, 0, pmt.length);
+        assertEquals(null, g.program);
+    }
+
+    @Test
+    public void oversizedVideoPesIsDroppedAndReported() {
+        Got g = new Got();
+        TsDemuxer d = new TsDemuxer(g);
+        byte[] psi = concat(List.of(pat(), pmt()));
+        d.feed(psi, 0, psi.length);
+        byte[] start = concat(packetize(VIDEO_PID, pes(0xE0, 0, new byte[100], false), null));
+        d.feed(start, 0, start.length);
+        byte[] filler = new byte[184];
+        int packets = TsDemuxer.MAX_PES / 184 + 2;
+        for (int i = 0; i < packets; i++) {
+            byte[] pk = packet(VIDEO_PID, false, filler, 0, filler.length, null);
+            d.feed(pk, 0, pk.length);
+        }
+        assertEquals(1, g.discontinuities);
+        sendFrame(d, 1, false);
+        sendFrame(d, 2, false);
+        assertEquals("the oversized frame is not emitted, the next one is", 1, g.pes.size());
+        assertEquals((byte) 1, ((byte[]) g.pes.get(0)[3])[5]);
+    }
+
+    @Test
     public void ptsDecoding() {
         byte[] b = pes(0xE0, 0x1FFFFFFFFL, new byte[0], false);
         assertEquals(0x1FFFFFFFFL, TsDemuxer.readTimestamp(b, 9));

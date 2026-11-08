@@ -171,13 +171,19 @@ public final class SessionService extends Service implements MiceServer.Listener
 
     // ---- sessions ----
 
-    private void beginSession(String source, int port, String via, MiceServer.Link link) {
+    /** False when refused: another source's session is live, or this source is already streaming. */
+    private boolean beginSession(String source, int port, String via, MiceServer.Link link) {
         if (session != null && !session.isEnded()) {
-            if (session.source.equals(source) && session.port == port) {
-                SessionLog.i("session to " + source + ":" + port + " already running");
-                return;
+            if (!session.source.equals(source) || session.port != port) {
+                SessionLog.i("refusing " + source + ":" + port + " (" + via + "): session with "
+                        + session.source + ":" + session.port + " is live");
+                return false;
             }
-            stopCurrent("replaced by " + source);
+            if (session.isStreaming()) {
+                SessionLog.i("session to " + source + ":" + port + " already running");
+                return false;
+            }
+            session.stop("restarted by a new request from the same source");
         }
         sessionLink = link;
         lastState = "connecting to " + source + ":" + port;
@@ -186,6 +192,7 @@ public final class SessionService extends Service implements MiceServer.Listener
         HelperClient.get(this).setSessionActive(true);
         session.start();
         if (surface != null) session.setSurface(surface);
+        return true;
     }
 
     /** Back key or STOP_PROJECTION: ends the session gracefully. */
@@ -237,7 +244,10 @@ public final class SessionService extends Service implements MiceServer.Listener
     @Override
     public void onSourceReady(MiceServer.Link link, String sourceIp, int rtspPort, String friendlyName) {
         main.post(() -> {
-            beginSession(sourceIp, rtspPort, "mice", link);
+            if (!beginSession(sourceIp, rtspPort, "mice", link)) {
+                if (link != sessionLink) link.sendStop();
+                return;
+            }
             launchReceiver(sourceIp, rtspPort, "mice");
         });
     }

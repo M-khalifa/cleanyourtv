@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,11 +46,13 @@ public class RtpTest {
 
     private static final class Collect implements RtpReorder.Sink {
         final List<Integer> got = new ArrayList<>();
+        final List<Integer> marked = new ArrayList<>();
         int lost;
 
         @Override
-        public void onPayload(byte[] d, int off, int len) {
+        public void onPayload(byte[] d, int off, int len, boolean marker) {
             got.add((int) d[off]);
+            if (marker) marked.add((int) d[off]);
         }
 
         @Override
@@ -59,7 +62,21 @@ public class RtpTest {
     }
 
     private static void push(RtpReorder r, int seq, int marker) {
-        r.push(seq & 0xFFFF, new byte[]{(byte) marker}, 0, 1);
+        r.push(seq & 0xFFFF, new byte[]{(byte) marker}, 0, 1, false);
+    }
+
+    @Test
+    public void markerTravelsWithItsPacketAndLateDuplicateDropsIt() {
+        Collect c = new Collect();
+        RtpReorder r = new RtpReorder(8, c);
+        r.push(10, new byte[]{0}, 0, 1, false);
+        r.push(12, new byte[]{2}, 0, 1, true);
+        r.push(11, new byte[]{1}, 0, 1, false);
+        assertEquals(List.of(0, 1, 2), c.got);
+        assertEquals("held packet keeps its marker", List.of(2), c.marked);
+        r.push(12, new byte[]{2}, 0, 1, true);
+        assertEquals("late duplicate is not delivered, nor its marker", List.of(2), c.marked);
+        assertEquals(3, c.got.size());
     }
 
     @Test
@@ -114,5 +131,28 @@ public class RtpTest {
         push(r, 5, 0);
         assertEquals(1, c.got.size());
         assertEquals(1, r.late());
+    }
+
+    @Test
+    public void rtpFromAnotherHostOrStreamIsRejected() throws Exception {
+        InetAddress source = InetAddress.getByName("192.168.49.20");
+        InetAddress other = InetAddress.getByName("192.168.1.66");
+        RtpSourceLock lock = new RtpSourceLock();
+        assertEquals(false, lock.accept(source, null, 1));
+        assertEquals(true, lock.accept(source, source, 1));
+        assertEquals(false, lock.accept(other, source, 1));
+        assertEquals(false, lock.accept(source, source, 2));
+        assertEquals(true, lock.accept(source, source, 1));
+        assertEquals(3, lock.rejected());
+    }
+
+    @Test
+    public void rtpLockFollowsALastingSsrcChangeFromTheSource() throws Exception {
+        InetAddress source = InetAddress.getByName("192.168.49.20");
+        RtpSourceLock lock = new RtpSourceLock();
+        lock.accept(source, source, 1);
+        for (int i = 1; i < RtpSourceLock.RELOCK_AFTER; i++) assertEquals(false, lock.accept(source, source, 2));
+        assertEquals(true, lock.accept(source, source, 2));
+        assertEquals(false, lock.accept(source, source, 1));
     }
 }

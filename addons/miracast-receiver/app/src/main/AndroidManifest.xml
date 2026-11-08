@@ -36,10 +36,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Exported for the adb debug hook and for the shell-uid helper's `am start`. -->
+        <!-- Exported only to holders of a shell-level permission: the adb debug hook and the helper's `am start`. -->
         <activity
             android:name=".ReceiverActivity"
             android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"
             android:launchMode="singleTask"
             android:excludeFromRecents="true"
             android:screenOrientation="landscape"

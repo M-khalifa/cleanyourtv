@@ -6,7 +6,8 @@ import java.util.Map;
 /** Small RTP reorder window: emits payloads in sequence order and reports gaps it gives up on. */
 public final class RtpReorder {
     public interface Sink {
-        void onPayload(byte[] data, int off, int len);
+        /** marker is the RTP M bit of the packet this payload came in. */
+        void onPayload(byte[] data, int off, int len, boolean marker);
 
         void onLoss(int packets);
     }
@@ -15,6 +16,7 @@ public final class RtpReorder {
     private final int window;
     private final Sink sink;
     private final Map<Integer, byte[]> held = new HashMap<>();
+    private final Map<Integer, Boolean> heldMarker = new HashMap<>();
     private int expected = -1;
     private long lost;
     private long late;
@@ -32,22 +34,18 @@ public final class RtpReorder {
         return late;
     }
 
-    /** True when nothing is held back waiting for a missing packet. */
-    public boolean idle() {
-        return held.isEmpty();
-    }
-
     /** Signed distance a - b on the 16-bit sequence circle. */
     static int diff(int a, int b) {
         int d = (a - b) & 0xFFFF;
         return d >= 0x8000 ? d - 0x10000 : d;
     }
 
-    public void push(int seq, byte[] data, int off, int len) {
+    public void push(int seq, byte[] data, int off, int len, boolean marker) {
         if (expected < 0) expected = seq;
         int d = diff(seq, expected);
         if (Math.abs(d) > RESET_DISTANCE) {
             held.clear();
+            heldMarker.clear();
             expected = seq;
             d = 0;
         }
@@ -56,7 +54,7 @@ public final class RtpReorder {
             return;
         }
         if (d == 0) {
-            sink.onPayload(data, off, len);
+            sink.onPayload(data, off, len, marker);
             expected = (expected + 1) & 0xFFFF;
             drain();
             return;
@@ -64,6 +62,7 @@ public final class RtpReorder {
         byte[] copy = new byte[len];
         System.arraycopy(data, off, copy, 0, len);
         held.put(seq, copy);
+        heldMarker.put(seq, marker);
         if (held.size() > window) {
             int gap = Integer.MAX_VALUE;
             for (int s : held.keySet()) gap = Math.min(gap, diff(s, expected));
@@ -89,7 +88,7 @@ public final class RtpReorder {
     private void drain() {
         byte[] b;
         while ((b = held.remove(expected)) != null) {
-            sink.onPayload(b, 0, b.length);
+            sink.onPayload(b, 0, b.length, Boolean.TRUE.equals(heldMarker.remove(expected)));
             expected = (expected + 1) & 0xFFFF;
         }
     }

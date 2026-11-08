@@ -168,4 +168,47 @@ public class WfdSinkProtocolTest {
         p.handle(RtspMessage.response(454, "Session Not Found", Integer.toString(setup.cseq())));
         assertTrue(events.contains("teardown"));
     }
+
+    private List<RtspMessage> answerSetup(String sessionHeader) {
+        RtspMessage setup = p.handle(req("SET_PARAMETER", 4, "wfd_trigger_method: SETUP\r\n")).get(1);
+        RtspMessage ok = RtspMessage.response(200, "OK", Integer.toString(setup.cseq()));
+        if (sessionHeader != null) ok.header("Session", sessionHeader);
+        return p.handle(ok);
+    }
+
+    @Test
+    public void setupAnswerWithEmptySessionEndsCleanly() {
+        List<RtspMessage> out = answerSetup(";");
+        assertTrue("no PLAY without a session", out.isEmpty());
+        assertTrue(events.contains("teardown"));
+        assertNull(p.session());
+    }
+
+    @Test
+    public void setupAnswerWithBlankSessionIdEndsCleanly() {
+        assertTrue(answerSetup(" ;timeout=30").isEmpty());
+        assertTrue(events.contains("teardown"));
+    }
+
+    @Test
+    public void setupAnswerWithoutSessionEndsCleanly() {
+        assertTrue(answerSetup(null).isEmpty());
+        assertTrue(events.contains("teardown"));
+    }
+
+    @Test
+    public void unsupportedMethodIsAnswered501() {
+        List<RtspMessage> out = p.handle(req("PLAY", 8, null));
+        assertEquals(1, out.size());
+        assertEquals("RTSP/1.0 501 Not Implemented", out.get(0).startLine);
+        assertEquals("8", out.get(0).get("CSeq"));
+        assertFalse(p.sourceTornDown());
+    }
+
+    @Test
+    public void teardownFromSourceIsAcknowledgedAndEndsSession() {
+        List<RtspMessage> out = p.handle(req("TEARDOWN", 9, null));
+        assertEquals("RTSP/1.0 200 OK", out.get(0).startLine);
+        assertTrue(p.sourceTornDown());
+    }
 }

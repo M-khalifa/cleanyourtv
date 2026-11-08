@@ -34,6 +34,8 @@ public final class TsDemuxer {
     private int sectionPid = -1;
     /** Video frames in a row whose end lined up with an RTP marker before early emission is trusted. */
     static final int ALIGN_FRAMES = 30;
+    /** Largest PES kept; a 4K IDR stays well below it. */
+    static final int MAX_PES = 8 * 1024 * 1024;
     private int videoPid = -1;
     private boolean markerSeen;
     private int markerAligned;
@@ -44,6 +46,7 @@ public final class TsDemuxer {
         final ByteArrayOutputStream buf = new ByteArrayOutputStream(64 * 1024);
         boolean active;
         boolean corrupt;
+        boolean endedByMarker;
         int expectedLength;
     }
 
@@ -63,6 +66,7 @@ public final class TsDemuxer {
         if (s == null || !s.active || s.buf.size() == 0) return;
         emit(videoPid, TYPE_H264, s);
         s.active = false;
+        s.endedByMarker = true;
         s.buf.reset();
         earlyEmits++;
     }
@@ -154,8 +158,22 @@ public final class TsDemuxer {
             s.buf.reset();
             s.active = true;
             s.corrupt = false;
+            s.endedByMarker = false;
             s.expectedLength = -1;
         } else if (!s.active) {
+            if (s.endedByMarker) {
+                // The frame went on after its marker: what was emitted is truncated.
+                s.endedByMarker = false;
+                earlyEmit = false;
+                markerAligned = 0;
+                listener.onDiscontinuity(pid);
+            }
+            return;
+        }
+        if (s.buf.size() + payloadEnd - pos > MAX_PES) {
+            s.active = false;
+            s.buf.reset();
+            listener.onDiscontinuity(pid);
             return;
         }
         s.buf.write(d, pos, payloadEnd - pos);
@@ -227,6 +245,7 @@ public final class TsDemuxer {
     }
 
     private void parsePmt(byte[] s, int total) {
+        if (total < 16) return;
         int programInfoLength = ((s[10] & 0x0F) << 8) | (s[11] & 0xFF);
         int i = 12 + programInfoLength;
         Map<Integer, Integer> found = new HashMap<>();

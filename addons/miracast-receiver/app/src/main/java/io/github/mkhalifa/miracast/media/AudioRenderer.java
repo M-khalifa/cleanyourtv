@@ -14,16 +14,24 @@ import java.util.List;
 
 import io.github.mkhalifa.miracast.SessionLog;
 
-/** LPCM (byte-swapped) and AAC (MediaCodec) to a low-latency AudioTrack with at most ~100 ms queued. */
+/** LPCM (byte-swapped) and AAC (MediaCodec) to a low-latency AudioTrack: video playout delay plus at most ~100 ms queued. */
 public final class AudioRenderer {
     private static final int MAX_LATENCY_MS = 100;
     private static final int MAX_AAC_PENDING = 20;
+    /** Matches FramePacer.MAX_DELAY_NS. */
+    static final int MAX_AV_DELAY_MS = 150;
+    /** Smallest delay change acted on, so the gentle shrink of the video delay does not cut audio every frame. */
+    static final int DELAY_STEP_MS = 20;
 
     private AudioTrack track;
     private int trackRate;
     private int trackChannels;
     private long framesWritten;
     private long droppedChunks;
+    private volatile long videoDelayMs;
+    private long appliedDelayMs;
+    private long skipFrames;
+    private boolean released;
 
     private MediaCodec aac;
     private String aacConfig;
@@ -32,7 +40,25 @@ public final class AudioRenderer {
     private final ArrayDeque<Integer> aacInputs = new ArrayDeque<>();
     private final ArrayDeque<Object[]> aacPending = new ArrayDeque<>();
 
+    /** Current video playout delay; audio follows it in steps of DELAY_STEP_MS up to MAX_AV_DELAY_MS. */
+    public void setVideoDelayMs(long ms) {
+        videoDelayMs = ms;
+    }
+
+    /** Delay change to apply now: positive pads silence, negative skips audio, 0 within one step. */
+    static long delayStepMs(long applied, long wanted) {
+        long w = Math.max(0, Math.min(MAX_AV_DELAY_MS, wanted));
+        long d = w - applied;
+        return Math.abs(d) >= DELAY_STEP_MS ? d : 0;
+    }
+
+    /** Frames written but not yet played; both counters wrap at 32 bits the same way. */
+    static int queuedFrames(long framesWritten, int playbackHead) {
+        return (int) framesWritten - playbackHead;
+    }
+
     public synchronized void onLpcm(byte[] pes, int len) {
+        if (released) return;
         Lpcm h = Lpcm.parse(pes, len);
         if (h == null) {
             droppedChunks++;
@@ -44,6 +70,7 @@ public final class AudioRenderer {
     }
 
     public synchronized void onAac(byte[] pes, int len, long ptsUs) {
+        if (released) return;
         List<Adts.Frame> frames = Adts.split(pes, len);
         if (frames.isEmpty()) {
             droppedChunks++;
@@ -69,6 +96,7 @@ public final class AudioRenderer {
 
     private void startAac(Adts.Frame f, String config) {
         releaseAac();
+        MediaCodec c = null;
         try {
             if (aacHandler == null) {
                 aacThread.start();
@@ -78,7 +106,7 @@ public final class AudioRenderer {
             MediaFormat fmt = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, f.sampleRate(), channels);
             fmt.setByteBuffer("csd-0", ByteBuffer.wrap(f.audioSpecificConfig()));
             fmt.setInteger(MediaFormat.KEY_IS_ADTS, 0);
-            MediaCodec c = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
+            c = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
             c.setCallback(new MediaCodec.Callback() {
                 @Override
                 public void onInputBufferAvailable(MediaCodec mc, int index) {
@@ -130,6 +158,13 @@ public final class AudioRenderer {
             SessionLog.i("aac decoder " + c.getName() + " " + f.sampleRate() + " Hz ch=" + channels);
         } catch (Exception e) {
             SessionLog.w("aac decoder setup failed", e);
+            if (c != null && c != aac) {
+                try {
+                    c.release();
+                } catch (RuntimeException re) {
+                    SessionLog.w("aac release after failed setup failed", re);
+                }
+            }
             releaseAac();
         }
     }
@@ -169,25 +204,44 @@ public final class AudioRenderer {
     }
 
     private void write(int rate, int channels, byte[] pcm, int off, int len) {
+        if (released) return;
         if (track == null || rate != trackRate || channels != trackChannels) openTrack(rate, channels);
         if (track == null) return;
-        long queued = framesWritten - (track.getPlaybackHeadPosition() & 0xFFFFFFFFL);
-        if (queued * 1000L / rate > MAX_LATENCY_MS) {
+        int frameBytes = 2 * channels;
+        long step = delayStepMs(appliedDelayMs, videoDelayMs);
+        if (step > 0) {
+            byte[] silence = new byte[(int) (step * rate / 1000) * frameBytes];
+            int n = track.write(silence, 0, silence.length, AudioTrack.WRITE_NON_BLOCKING);
+            if (n > 0) framesWritten += n / frameBytes;
+        } else if (step < 0) {
+            skipFrames += -step * rate / 1000;
+        }
+        appliedDelayMs += step;
+        if (skipFrames > 0) {
+            long skip = Math.min(skipFrames, len / frameBytes);
+            skipFrames -= skip;
+            off += (int) skip * frameBytes;
+            len -= (int) skip * frameBytes;
+            if (len <= 0) return;
+        }
+        long queued = queuedFrames(framesWritten, track.getPlaybackHeadPosition());
+        if (queued * 1000L / rate > MAX_LATENCY_MS + appliedDelayMs) {
             droppedChunks++;
             return;
         }
         int n = track.write(pcm, off, len, AudioTrack.WRITE_NON_BLOCKING);
-        if (n > 0) framesWritten += n / (2L * channels);
+        if (n > 0) framesWritten += n / frameBytes;
         if (n < len) droppedChunks++;
     }
 
     private void openTrack(int rate, int channels) {
         releaseTrack();
+        AudioTrack t = null;
         try {
             int mask = channels == 1 ? AudioFormat.CHANNEL_OUT_MONO : AudioFormat.CHANNEL_OUT_STEREO;
             int min = AudioTrack.getMinBufferSize(rate, mask, AudioFormat.ENCODING_PCM_16BIT);
-            int size = Math.max(min * 2, rate * channels * 2 / 5);
-            AudioTrack t = new AudioTrack.Builder()
+            int size = Math.max(min * 2, rate * channels * 2 * (MAX_LATENCY_MS + MAX_AV_DELAY_MS + 50) / 1000);
+            t = new AudioTrack.Builder()
                     .setAudioAttributes(new AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_MEDIA)
                             .setContentType(AudioAttributes.CONTENT_TYPE_MOVIE).build())
@@ -202,9 +256,12 @@ public final class AudioRenderer {
             trackRate = rate;
             trackChannels = channels;
             framesWritten = 0;
+            appliedDelayMs = 0;
+            skipFrames = 0;
             SessionLog.i("audio track " + rate + " Hz ch=" + channels + " buffer=" + size);
         } catch (RuntimeException e) {
             SessionLog.w("audio track setup failed", e);
+            if (t != null) t.release();
             track = null;
         }
     }
@@ -226,6 +283,7 @@ public final class AudioRenderer {
     }
 
     public synchronized void release() {
+        released = true;
         releaseAac();
         releaseTrack();
         if (aacHandler != null) aacThread.quitSafely();
