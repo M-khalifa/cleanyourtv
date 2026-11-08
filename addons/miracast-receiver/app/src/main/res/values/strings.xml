@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Miracast Receiver</string>
+    <string name="channel_name">Screen casting</string>
+    <string name="notif_ready">Ready as %1$s</string>
+    <string name="notif_session">Showing %1$s</string>
+    <string name="connecting">Connecting to %1$s…</string>
+    <string name="turn_on">Receiver is off. Turn on</string>
+    <string name="turn_off">Receiver is on. Turn off</string>
+    <string name="save_name">Save name</string>
+    <string name="grant_shizuku">Grant Shizuku access</string>
+    <string name="restart_helper">Restart helper</string>
+    <string name="group_mode_off">Wi-Fi Direct group mode: off (discovery only)</string>
+    <string name="group_mode_on">Wi-Fi Direct group mode: on</string>
+    <string name="capability">MS-MICE capability byte: %1$s</string>
+    <string name="last_log">Recent log</string>
+    <string name="shizuku_off">Shizuku is not running</string>
+    <string name="shizuku_ok">Shizuku access granted</string>
+    <string name="shizuku_ungranted">Shizuku running, access not granted</string>
+    <string name="status_line">Name: %1$s (host %2$s.local)\n%3$s</string>
+</resources>
