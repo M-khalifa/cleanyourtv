@@ -2,7 +2,7 @@
 
 Lets a Windows 10/11 PC cast its screen (video and sound) to the TV with **Win+K**. The TV shows up in the
 Win+K list under its receiver name (default **KhalifaTV**); pick it and the desktop appears full screen on the TV.
-Press **Back** on the remote to disconnect.
+Press **Back** on the remote to disconnect. **OK** switches frame pacing between smooth (default) and instant.
 
 Fork-only add-on, tested on a TCL Q6 Google TV (Android 14). It needs [Shizuku](https://github.com/thedjchi/Shizuku)
 because Android lets only system apps or the shell user advertise a Wi-Fi Display receiver.
@@ -57,6 +57,9 @@ on their own.
 
 - No HDCP: protected video (streaming apps in a browser) stays black. The desktop and normal windows work.
 - No UIBC: the TV remote does not control the PC.
-- Video up to 1920x1080 at 60 Hz (H.264 constrained baseline/high, level 4.2); audio LPCM 44.1/48 kHz stereo or AAC.
-- Frames are shown as soon as they are decoded; audio is kept within about 100 ms and dropped beyond that.
+- Video up to 1920x1080 at 60 Hz, 2560x1440 at 60 Hz and 3840x2160 at 30 Hz (H.264 high, level 5.1; the TCL H.264
+  decoder stops at 4K30). Windows sends 4K and 1440p only when the TV is an extended display (Win+P, Extend).
+  Bitrate cap 40 Mbps; audio LPCM 44.1/48 kHz stereo or AAC.
+- Smooth pacing shows frames on the source clock plus a playout delay that holds the worst lateness of the last
+  10 s (up to 150 ms); jitter from Windows and Wi-Fi turns into steady delay. Audio is kept within about 100 ms.
 - In group mode, while the TV's Wi-Fi Direct group is up, the TV cannot join another Wi-Fi Direct device.

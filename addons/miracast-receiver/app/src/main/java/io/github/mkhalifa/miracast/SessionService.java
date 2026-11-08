@@ -206,6 +206,12 @@ public final class SessionService extends Service implements MiceServer.Listener
         if (session != null) session.setSurface(s);
     }
 
+    /** OK on the remote during a session: switches frame pacing between smooth and instant. */
+    public String togglePacing() {
+        WfdSession s = session;
+        return s == null ? null : s.togglePacing();
+    }
+
     public boolean hasSession() {
         return session != null && !session.isEnded();
     }

@@ -32,6 +32,11 @@ public final class RtpReorder {
         return late;
     }
 
+    /** True when nothing is held back waiting for a missing packet. */
+    public boolean idle() {
+        return held.isEmpty();
+    }
+
     /** Signed distance a - b on the 16-bit sequence circle. */
     static int diff(int a, int b) {
         int d = (a - b) & 0xFFFF;

@@ -80,7 +80,7 @@ public class WfdSinkProtocolTest {
                 + "wfd_client_rtp_ports: RTP/AVP/UDP;unicast 19000 0 mode=play\r\n"
                 + "wfd_content_protection: none\r\n"
                 + "wfdx_video_formats: " + WfdCapabilities.videoFormatsX() + "\r\n"
-                + "microsoft_latency_management_capability: none\r\n", r.body);
+                + "microsoft_latency_management_capability: supported\r\n", r.body);
         assertEquals(1, unknown.size());
         assertEquals("microsoft_cursor", unknown.get(0));
         assertFalse(r.body.contains("wfd_video_formats"));
@@ -93,6 +93,18 @@ public class WfdSinkProtocolTest {
         assertEquals("0040 00 0002 0010 000001bdeb 0000000000 00000000 00 0000 0000 00 none none, "
                 + "0001 0010 000001bdeb 0000000000 00000000 00 0000 0000 00 none none", WfdCapabilities.videoFormatsX());
         assertNull(new WfdCapabilities(false).answer("wfdx_video_formats"));
+    }
+
+    @Test
+    public void uhdOffersLevel51AndCustom2160p30() {
+        WfdCapabilities uhd = new WfdCapabilities(true, true);
+        assertEquals("40 00 02 40 0001bdeb 00000000 00000000 00 0000 0000 00 none none, "
+                + "01 10 0001bdeb 00000000 00000000 00 0000 0000 00 none none", uhd.answer("wfd_video_formats"));
+        assertEquals("0040 00 0002 0040 0006abbdeb 0000000000 00000000 00 0000 0000 00 none none, "
+                + "0001 0010 000001bdeb 0000000000 00000000 00 0000 0000 00 none none", uhd.answer("wfdx_video_formats"));
+        assertEquals("0f00 0870 001e, 0a00 05a0 003c", uhd.answer("microsoft_custom_video_formats"));
+        assertEquals("none", new WfdCapabilities(true).answer("microsoft_custom_video_formats"));
+        assertEquals("40000000", uhd.answer("microsoft_max_bitrate"));
     }
 
     @Test

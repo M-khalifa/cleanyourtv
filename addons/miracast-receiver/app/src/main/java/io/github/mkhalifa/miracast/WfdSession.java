@@ -41,8 +41,9 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
     public final String via;
     private final Callback cb;
     private final long connectDeadlineMs;
-    private final WfdSinkProtocol protocol = new WfdSinkProtocol(new WfdCapabilities(true), this);
-    private final VideoDecoder video = new VideoDecoder(this);
+    private static final boolean UHD = true;
+    private final WfdSinkProtocol protocol = new WfdSinkProtocol(new WfdCapabilities(true, UHD), this);
+    private final VideoDecoder video = new VideoDecoder(this, UHD);
     private final AudioRenderer audio = new AudioRenderer();
     private final Object writeLock = new Object();
     private volatile Socket socket;
@@ -79,6 +80,10 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
 
     public void setSurface(Surface s) {
         video.setSurface(s);
+    }
+
+    public String togglePacing() {
+        return video.togglePacing();
     }
 
     /** Sink-initiated end (Back key or STOP_PROJECTION): M8 then close. */
@@ -246,6 +251,8 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
         long packets = 0;
         long bytes = 0;
         long lastStats = System.currentTimeMillis();
+        long netMinNs = Long.MAX_VALUE;
+        long netMaxNs = Long.MIN_VALUE;
         while (!ended) {
             try {
                 p.setLength(buf.length);
@@ -265,10 +272,21 @@ public final class WfdSession implements WfdSinkProtocol.Listener, VideoDecoder.
             bytes += p.getLength();
             if (!rtp.parse(buf, 0, p.getLength())) continue;
             reorder.push(rtp.sequence, buf, rtp.payloadOffset, rtp.payloadLength);
+            if (rtp.marker) {
+                // RTP timestamp is the sender's clock at send time: its spread against arrival is network jitter.
+                long lag = System.nanoTime() - rtp.timestamp * 1_000_000L / 90;
+                netMinNs = Math.min(netMinNs, lag);
+                netMaxNs = Math.max(netMaxNs, lag);
+                if (reorder.idle()) demux.onRtpMarker();
+            }
             long now = System.currentTimeMillis();
             if (now - lastStats >= 10_000) {
+                long net = netMinNs > netMaxNs ? -1 : (netMaxNs - netMinNs) / 1_000_000L;
                 SessionLog.i("rtp packets=" + packets + " bytes=" + bytes + " lost=" + reorder.lost() + " late="
-                        + reorder.late() + "; " + video.stats() + "; " + audio.stats());
+                        + reorder.late() + " netJitter=" + net + "ms " + demux.stats() + "; " + video.stats()
+                        + "; " + audio.stats());
+                netMinNs = Long.MAX_VALUE;
+                netMaxNs = Long.MIN_VALUE;
                 lastStats = now;
             }
         }

@@ -29,6 +29,7 @@ public final class ReceiverActivity extends Activity implements SessionService.U
     private boolean bound;
     private int videoW = 1920;
     private int videoH = 1080;
+    private final Runnable hideStatus = () -> status.setVisibility(View.GONE);
 
     @Override
     protected void onCreate(Bundle state) {
@@ -100,6 +101,17 @@ public final class ReceiverActivity extends Activity implements SessionService.U
             SessionLog.i("Back pressed: disconnecting");
             if (service != null) service.stopCurrent("Back on the TV");
             finish();
+            return true;
+        }
+        if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)
+                && event.getRepeatCount() == 0 && service != null) {
+            String mode = service.togglePacing();
+            if (mode != null) {
+                status.setText("Frame pacing: " + mode);
+                status.setVisibility(View.VISIBLE);
+                status.removeCallbacks(hideStatus);
+                status.postDelayed(hideStatus, 2_000);
+            }
             return true;
         }
         return super.onKeyDown(keyCode, event);

@@ -32,6 +32,13 @@ public final class TsDemuxer {
     private final Map<Integer, Integer> lastCc = new HashMap<>();
     private final ByteArrayOutputStream section = new ByteArrayOutputStream();
     private int sectionPid = -1;
+    /** Video frames in a row whose end lined up with an RTP marker before early emission is trusted. */
+    static final int ALIGN_FRAMES = 30;
+    private int videoPid = -1;
+    private boolean markerSeen;
+    private int markerAligned;
+    private boolean earlyEmit;
+    private long earlyEmits;
 
     private static final class Pes {
         final ByteArrayOutputStream buf = new ByteArrayOutputStream(64 * 1024);
@@ -42,6 +49,26 @@ public final class TsDemuxer {
 
     public TsDemuxer(Listener listener) {
         this.listener = listener;
+    }
+
+    /**
+     * RTP marker after a fed packet. A video PES has no length, so it normally ends only when the next one
+     * starts, a frame later. Once markers have matched frame ends ALIGN_FRAMES times in a row, the frame is
+     * emitted at its marker instead; one marker that does not match switches this off again.
+     */
+    public void onRtpMarker() {
+        markerSeen = true;
+        if (!earlyEmit) return;
+        Pes s = pes.get(videoPid);
+        if (s == null || !s.active || s.buf.size() == 0) return;
+        emit(videoPid, TYPE_H264, s);
+        s.active = false;
+        s.buf.reset();
+        earlyEmits++;
+    }
+
+    public String stats() {
+        return "frameEndByMarker=" + (earlyEmit ? "on" : "off(" + markerAligned + ")") + " early=" + earlyEmits;
     }
 
     /** Feeds any number of whole 188-byte packets; stray bytes before a sync byte are skipped. */
@@ -109,6 +136,18 @@ public final class TsDemuxer {
         if (ccError) {
             s.corrupt = true;
             listener.onDiscontinuity(pid);
+        }
+        if (type == TYPE_H264) {
+            videoPid = pid;
+            if (pusi) {
+                if (markerSeen) {
+                    if (++markerAligned >= ALIGN_FRAMES) earlyEmit = true;
+                } else {
+                    markerAligned = 0;
+                    earlyEmit = false;
+                }
+            }
+            markerSeen = false;
         }
         if (pusi) {
             if (s.active) emit(pid, type, s);

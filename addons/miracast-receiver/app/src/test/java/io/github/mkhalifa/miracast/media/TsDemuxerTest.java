@@ -191,6 +191,43 @@ public class TsDemuxerTest {
         assertArrayEquals(au, (byte[]) e[3]);
     }
 
+    private void sendFrame(TsDemuxer d, int i, boolean marker) {
+        byte[] ts = concat(packetize(VIDEO_PID, pes(0xE0, 3_000L * i, new byte[]{0, 0, 0, 1, 0x41, (byte) i}, false), null));
+        d.feed(ts, 0, ts.length);
+        if (marker) d.onRtpMarker();
+    }
+
+    @Test
+    public void rtpMarkerEndsFramesOnceLearned() {
+        Got g = new Got();
+        TsDemuxer d = new TsDemuxer(g);
+        byte[] psi = concat(List.of(pat(), pmt()));
+        d.feed(psi, 0, psi.length);
+        for (int i = 0; i <= TsDemuxer.ALIGN_FRAMES; i++) sendFrame(d, i, true);
+        int before = g.pes.size();
+        assertEquals("the frame that completed learning already ended at its marker", TsDemuxer.ALIGN_FRAMES + 1, before);
+        sendFrame(d, 100, true);
+        assertEquals("frame emitted at its marker", before + 1, g.pes.size());
+        assertEquals((byte) 100, ((byte[]) g.pes.get(g.pes.size() - 1)[3])[5]);
+        assertTrue(d.stats().contains("frameEndByMarker=on"));
+    }
+
+    @Test
+    public void markerInsideAFrameTurnsEarlyEmitOff() {
+        Got g = new Got();
+        TsDemuxer d = new TsDemuxer(g);
+        byte[] psi = concat(List.of(pat(), pmt()));
+        d.feed(psi, 0, psi.length);
+        for (int i = 0; i <= TsDemuxer.ALIGN_FRAMES; i++) sendFrame(d, i, true);
+        sendFrame(d, 200, false);
+        sendFrame(d, 201, false);
+        assertTrue(d.stats().contains("frameEndByMarker=off"));
+        int n = g.pes.size();
+        sendFrame(d, 202, true);
+        assertEquals("waits for the next frame start again", n + 1, g.pes.size());
+        assertEquals((byte) 201, ((byte[]) g.pes.get(g.pes.size() - 1)[3])[5]);
+    }
+
     @Test
     public void boundedPesIsEmittedWithoutWaiting() {
         Got g = new Got();

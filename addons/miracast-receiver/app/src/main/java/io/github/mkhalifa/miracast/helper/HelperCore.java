@@ -38,7 +38,7 @@ import io.github.mkhalifa.miracast.mice.WscVendorElement;
  * join detection and receiver launch. All state lives on one HandlerThread.
  */
 public final class HelperCore {
-    public static final int VERSION = 3;
+    public static final int VERSION = 4;
     public static final String APP = "io.github.mkhalifa.miracast";
     static final String DEFAULT_NAME = "KhalifaTV";
     static final int CONTROL_PORT = 7236;
@@ -455,6 +455,12 @@ public final class HelperCore {
                 clients.clear();
                 pendingJoins.clear();
                 launchedIps.clear();
+                if (sessionActive && !groupMode) {
+                    // A Wi-Fi Direct session cannot outlive its group; the app may have died without saying so.
+                    HelperLog.i("group gone: session over, discovery resumes");
+                    sessionActive = false;
+                    lastRearm = 0;
+                }
             } else {
                 vendorApplied = null;
                 applyVendorElements();
