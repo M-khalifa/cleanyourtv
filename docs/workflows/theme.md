@@ -3,7 +3,8 @@
 **When to use this:** a new look that the keys in `themes/README.md` already carry.
 
 1. Create `themes/<name>/config.json` using only keys from the table in `themes/README.md`;
-   `themes/default/config.json` is the starting point.
+   `themes/default/config.json` is the starting point. Keep it under 64 KB: the launcher reads no larger
+   file at all, so a push refuses one instead of sending a theme the TV would drop.
 2. Add `wallpaper.jpg` or a `wallpapers/` folder if it uses them: dark, 1920x1080, under about 300 KB each,
    and art you have the right to use. `tests/test_theme_wallpapers.py` holds every picture to those numbers
    (a smaller 16:9 picture is fine, the launcher scales it) and names one the launcher would never draw: a
@@ -32,4 +33,6 @@
 
 Then run the tests with the checkout's venv: `tools/venv/bin/python -m unittest discover -s tests -v`.
 [`README.md`'s by-hand block](../../README.md) builds it, and it is where `tools/requirements.txt` puts the
-`adb_shell` and Pillow the suite imports - under the system `python3` those checks skip and the run still says OK.
+`adb_shell` the suite imports - under the system `python3` those checks skip and the run still says OK. The
+picture, card and wallpaper checks need Pillow as well: `tools/requirements-perf.txt` adds it, and without it
+they are reported as skips, not failures.

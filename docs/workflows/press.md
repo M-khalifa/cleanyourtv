@@ -14,7 +14,7 @@
    `tools/readme_featured.py`. Every page shows the same picture, so a translation that copies it states the
    same numbers in its own words: the pages named here are the ones that carry it today, not the rule.
    The end of each page's story section repeats the three numbers once more, in prose ("The coverage:
-   <articles> articles from <countries> countries and <videos> videos on YouTube and Bilibili, all in
+   `<articles>` articles from `<countries>` countries and `<videos>` videos on YouTube and Bilibili, all in
    `docs/PRESS.md`"), and the same test reads that sentence too: the page states the count twice, once in
    the card's alt text and once in that sentence, so a reader who sees one number in the picture and
    another in the story section is looking at a page that was half updated. Leave the counts out of the
@@ -22,13 +22,14 @@
    well, in a parenthetical just after the press link ("(numbers as of 31 October 2026)", "(Stand: 31.
    Oktober 2026)", "(stand 31 oktober 2026)", "(станом на 31 жовтня 2026 року)", "(rakamlar 31 Ekim 2026
    itibarıyla)", "(dados de 31 de outubro de 2026)", "(chiffres au 9 novembre 2026)", "(datos del 9 de
-   noviembre de 2026)"), so the day moves
+   noviembre de 2026)", the Hebrew "(המספרים נכון ל־14 בנובמבר 2026)", where the month carries the ב prefix a
+   Hebrew date puts in front of it), so the day moves
    with the sweep: it may not name a day earlier than the newest article row in `docs/PRESS.md`, the rule
    step 3 already applies to "views as of", because a count read on the 30th cannot hold an article
    published on the 31st.
    `tests/test_press_as_of_date.py` reads that parenthetical in each page's own words, off every page whose
-   story paragraph carries the link, and a page that writes none is not judged: `README.he.md` dates the
-   stars it had in the sentence before, and its coverage sentence ends at the link. That paragraph is also
+   story paragraph carries the link, so a translation that copies the sentence is read the day it lands; a
+   page that writes none is not judged. That paragraph is also
    read on the five front pages that have it without the card:
    `README.pt-BR.md`, the Hebrew `README.he.md`, the Uzbek `README.uz.md`, the French `README.fr.md` and the
    Spanish `README.es.md` show no `docs/card.jpg`, so their numbers are held to `README.md`'s alt text and to
@@ -56,4 +57,6 @@
 
 Then run the tests with the checkout's venv: `tools/venv/bin/python -m unittest discover -s tests -v`.
 [`README.md`'s by-hand block](../../README.md) builds it, and it is where `tools/requirements.txt` puts the
-`adb_shell` and Pillow the suite imports - under the system `python3` those checks skip and the run still says OK.
+`adb_shell` the suite imports - under the system `python3` those checks skip and the run still says OK. The
+picture, card and wallpaper checks need Pillow as well: `tools/requirements-perf.txt` adds it, and without it
+they are reported as skips, not failures.

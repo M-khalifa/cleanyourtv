@@ -34,19 +34,34 @@ script draws instead); the draw's is answered like the script that exited non-ze
 the tables are known to be written, and the remedy names an interpreter that runs). Two tests below pin
 each half.
 
+The tests read the remedy's interpreter as its own word, not as text anywhere on the line. The assertion that
+pinned "the remedy never hands back a bare `python3`" looked for `python3 tools/readme_stats.py` in the whole
+message, which also matches `/usr/bin/python3 tools/readme_stats.py` - a path, and the very interpreter that
+ran. So the suite failed on a clean tree under any Python whose own path ends in `python3`, which is
+`/usr/bin/python3` on a stock Ubuntu 24.04 and the line every module's docstring hands a contributor: 3558
+tests, FAILED (failures=1, skipped=115) on b121838a, where tools/venv's Python answered 3576 tests OK. The
+rule is now the one tests/test_documented_tool_commands.py's BARE_PYTHON holds the pages to - an interpreter
+with a path in it is a command, a bare name is not - and it holds whichever Python ran the suite.
+
 Run from the repository root: python3 -m unittest discover -s tests -v
 """
+import contextlib
+import errno
+import io
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tests"))
 sys.path.insert(0, str(ROOT / "tools"))
+import gen_tables  # noqa: E402  (main(), judged in-process for an error this filesystem may not give)
 import test_gen_tables as helper  # noqa: E402  (its tree() writes the three files the script rewrites)
 from test_card_font_argument import HAVE_PIL, LAUNCHER_FONT, shadow_dir  # noqa: E402
 
@@ -123,6 +138,30 @@ exit 0
 # a shebang naming a path that does not exist, which is how a venv copied from another machine looks.
 VENV_CANNOT_START = """#!/nonexistent/interpreter
 """
+
+# The interpreter a remedy line names, and the script it hands it. The two branches word the sentence
+# differently - an interpreter that could not start ends "commit it with the tables: <interpreter> <script>
+# <font> <out>", a script that exited non-zero puts the command before "and commit it with the tables" - so
+# the command is read by its own shape. Read as words rather than looked for inside the whole line, because
+# the interpreter can be a path that ends in `python3` - see bare_interpreter().
+REMEDY = re.compile(r"(?P<interpreter>\S+) (?P<script>tools/readme_stats\.py|tools/readme_card\.py) "
+                    r"<Fredoka\.ttf> \S+")
+# A name with no path in it, which is not a command: a stock Ubuntu 24.04 has /usr/bin/python3 and no
+# /usr/bin/python, and macOS ships no `python` without the developer tools. The rule
+# tests/test_documented_tool_commands.py's BARE_PYTHON holds the pages' commands to, here for the one line the
+# script prints itself.
+BARE_INTERPRETER = re.compile(r"^(python|python2|python3|py)(\.exe)?$", re.IGNORECASE)
+
+
+def remedy(text):
+    """(interpreter, script) from the remedy line in `text`, or None when it prints no such command."""
+    found = REMEDY.search(text)
+    return (found.group("interpreter"), found.group("script")) if found else None
+
+
+def bare_interpreter(interpreter):
+    """True for an interpreter named without a path, which the shell answers `command not found` to."""
+    return "/" not in interpreter and "\\" not in interpreter and bool(BARE_INTERPRETER.match(interpreter))
 
 
 class RedrawFailureTest(unittest.TestCase):
@@ -232,8 +271,16 @@ class RedrawSuccessTest(unittest.TestCase):
         self.assertTrue(written > 1000, f"docs/stats.png is {written} B with a variable font")
 
 
+@unittest.skipIf(os.name == "nt", "the venv interpreter these cases fake is a #!/bin/sh script, and a venv made "
+                                   "on Windows has an .exe at tools/venv/Scripts/python.exe, which no text file "
+                                   "can stand in for; tests/test_gen_tables_venv_python.py reads both paths")
 class RedrawInterpreterTest(unittest.TestCase):
-    """Which Python the two card scripts are handed: the checkout's venv when that venv has Pillow."""
+    """Which Python the two card scripts are handed: the checkout's venv when that venv has Pillow.
+
+    The venv these cases build is the POSIX one, tools/venv/bin/python. A Windows checkout's venv has
+    tools/venv/Scripts/python.exe instead, which this fixture cannot stand in for, so the end-to-end cases
+    here skip there; the two paths gen_tables.py asks for are read by tests/test_gen_tables_venv_python.py.
+    """
 
     def test_the_venvs_python_draws_the_pictures(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -290,10 +337,22 @@ class RedrawInterpreterTest(unittest.TestCase):
         self.assertIn("cannot start tools/venv/bin/python", done.stderr,
                       f"the interpreter that could not be started is not named: {done.stderr!r}")
         self.assertIn("The tables are written", done.stderr, done.stderr)
-        # The remedy is one the reader can run: the interpreter that just failed to start is not it.
-        self.assertIn(f"{sys.executable} tools/readme_stats.py", done.stderr,
-                      f"the remedy names an interpreter that cannot start: {done.stderr!r}")
-        self.assertNotIn("python3 tools/readme_stats.py", done.stderr, "the remedy hands back a bare python3")
+        # The remedy is one the reader can run: the interpreter that just failed to start is not it, and it is
+        # named with a path rather than the bare name `python3`, which a stock Ubuntu 24.04 does not have. The
+        # interpreter is read as its own word: with the checkout's venv Python it reads tools/venv/bin/python,
+        # and with /usr/bin/python3 - the `python3 -m unittest discover -s tests` line every module's docstring
+        # carries - it reads /usr/bin/python3, a command the reader can run that happens to contain
+        # "python3 tools/readme_stats.py" as a substring. Looking for that text anywhere on the line failed the
+        # whole suite on a clean tree under any Python whose own path ends in python3.
+        found = remedy(done.stderr)
+        if found is None:
+            self.fail(f"the remedy is not a command the reader can run: {done.stderr!r}")
+        interpreter, script = found
+        self.assertEqual(script, "tools/readme_stats.py", f"the remedy names another script: {done.stderr!r}")
+        self.assertEqual(interpreter, sys.executable,
+                         f"the remedy names an interpreter that did not run: {done.stderr!r}")
+        self.assertFalse(bare_interpreter(interpreter),
+                         f"the remedy hands back a bare {interpreter}, which is not a command: {done.stderr!r}")
         self.assertNotIn("Traceback", done.stderr, "a draw that could not start still ends in a traceback")
         self.assertIn("TCL A", readme, "the tables were not written before the redraw")
         for picture in pictures:
@@ -322,10 +381,55 @@ class RedrawInterpreterTest(unittest.TestCase):
             font.write_bytes(b"any font path that exists: the stub never reads it")
             done = run(root, font)
         self.assertEqual(done.returncode, 1, f"a redraw the venv answered with 1 exited {done.returncode}")
-        self.assertIn("tools/venv/bin/python tools/readme_stats.py <Fredoka.ttf> docs/stats.png", done.stderr,
-                      f"the remedy names another interpreter: {done.stderr!r}")
-        self.assertNotIn("python3 tools/readme_stats.py", done.stderr,
-                         "the remedy still hands the reader the interpreter that lacks Pillow")
+        found = remedy(done.stderr)
+        if found is None:
+            self.fail(f"the remedy is not a command the reader can run: {done.stderr!r}")
+        interpreter, script = found
+        self.assertEqual(script, "tools/readme_stats.py", f"the remedy names another script: {done.stderr!r}")
+        # The venv Python is the one whose Pillow probe answered and whose script failed on the font, so the
+        # retry is worded with it - relative to the checkout, the form its own usage line prints - and a retry
+        # under a bare name would be one a shell cannot resolve.
+        self.assertTrue(interpreter.endswith("tools/venv/bin/python"),
+                        f"the remedy still hands the reader the interpreter that lacks Pillow: {done.stderr!r}")
+        self.assertFalse(bare_interpreter(interpreter),
+                         f"the remedy hands back a bare {interpreter}, which is not a command: {done.stderr!r}")
+
+
+class RemedyTest(unittest.TestCase):
+    """The line the script prints is read as a command: an interpreter word, then the script it hands it."""
+
+    def test_the_line_is_read_up_to_the_script(self):
+        line = ("docs/stats.png was not redrawn: cannot start tools/venv/bin/python (No such file or directory). "
+                "The tables are written; draw the picture with an interpreter that runs, then commit it with the "
+                "tables: /usr/bin/python3 tools/readme_stats.py <Fredoka.ttf> docs/stats.png")
+        self.assertEqual(remedy(line), ("/usr/bin/python3", "tools/readme_stats.py"))
+
+    def test_a_line_without_a_remedy_is_not_read_as_one(self):
+        self.assertIsNone(remedy("docs/stats.png was not redrawn: readme_stats.py exited 1 and its line above "
+                                 "says why. Nothing was drawn."))
+
+    def test_a_path_is_a_command(self):
+        # Whatever ran the suite: the checkout's venv Python, the system interpreter of a stock Ubuntu 24.04,
+        # a Homebrew one on macOS, and the .exe a Windows checkout has.
+        for interpreter in ("tools/venv/bin/python", "/usr/bin/python3", "/usr/local/bin/python3.12",
+                            "C:\\Python312\\python.exe", "C:/Python312/python.exe"):
+            self.assertFalse(bare_interpreter(interpreter), interpreter)
+
+    def test_a_bare_name_is_not_a_command(self):
+        for interpreter in ("python", "python2", "python3", "py", "python.exe", "Python3"):
+            self.assertTrue(bare_interpreter(interpreter), interpreter)
+
+    def test_the_remedy_the_old_line_printed_is_refused(self):
+        # Before 0bd4bcfd the remedy interpolated the name `python3` itself, which is what the assertion that
+        # read the whole line for "python3 tools/readme_stats.py" was written to catch. Read as a word, that
+        # line is refused and a path is not, so the guard still fails on the line it was written for.
+        old = ("docs/stats.png was not redrawn: readme_stats.py exited 1 and its line above says why. The tables "
+               "are written; draw the picture with an interpreter that runs, then commit it with the tables: "
+               "python3 tools/readme_stats.py <Fredoka.ttf> docs/stats.png")
+        found = remedy(old)
+        if found is None:
+            self.fail(f"the old remedy line is no longer read: {old}")
+        self.assertTrue(bare_interpreter(found[0]), old)
 
 
 class OrderTest(unittest.TestCase):
@@ -341,6 +445,75 @@ class OrderTest(unittest.TestCase):
         self.assertIn("1 out of date", doc, "the exit-status line is gone")
         self.assertIn("pictures", doc, "the docstring does not say what exit 1 also means")
         self.assertIn("the tables are written", doc, "the docstring does not say what a failed redraw left")
+
+
+class FontNameTest(unittest.TestCase):
+    """A --font the filesystem will not look at is refused at 2 on every version, and says why.
+
+    `Path.is_file()` answered that word in two ways: up to Python 3.13 it re-raised the OSError, so the run
+    ended in a traceback at 1 - the code --check keeps for tables that are out of date - and 3.14 swallowed
+    every OSError and answered False, so the same word printed "not in this repo" for a font that is there.
+    The check now asks os.stat once, which is the shape --root's own refusal already had (#4032), and these
+    are the two cases that one carries: a real over-long name, and the same branch with the OSError injected
+    in-process for the filesystems that accept such a name.
+    """
+
+    def test_a_font_name_the_filesystem_refuses_is_named_and_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = checkout(tmp)
+            name = Path(tmp) / ("f" * 300)
+            try:
+                os.stat(name)
+            except OSError:
+                pass
+            else:
+                self.skipTest("this filesystem stats a 300-character name")
+            before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+            done = run(root, name)
+            after = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+            self.assertEqual(done.returncode, 2, done.stderr)
+            self.assertEqual(done.stdout, "")
+            self.assertIn(f"--font {str(name)!r}", done.stderr)
+            self.assertIn("cannot be looked at", done.stderr)
+            self.assertIn("Nothing was read or written", done.stderr)
+            self.assertNotIn("Traceback", done.stderr)
+            self.assertEqual(after, before, "a font it could not look at must not publish the tables")
+
+    def test_an_os_error_from_the_font_check_is_the_same_refusal(self):
+        # The same branch where a 300-character name is acceptable: a font under a folder this user may not
+        # traverse answers EACCES, injected where the check asks rather than made with a real permission bit.
+        refused = PermissionError(errno.EACCES, "Permission denied")
+        real_stat = os.stat
+
+        def stat(path, *args, **kwargs):
+            if str(path) == "Fredoka.ttf":
+                raise refused
+            return real_stat(path, *args, **kwargs)
+
+        stderr = io.StringIO()
+        with mock.patch.object(gen_tables.os, "stat", side_effect=stat), contextlib.redirect_stderr(stderr):
+            with self.assertRaises(SystemExit) as caught:
+                gen_tables.main(["--root", str(ROOT), "--font", "Fredoka.ttf"])
+        self.assertEqual(caught.exception.code, 2)
+        line = stderr.getvalue()
+        self.assertIn("--font 'Fredoka.ttf'", line)
+        self.assertIn("Permission denied", line)
+        self.assertIn("Nothing was read or written", line)
+        self.assertNotIn("Traceback", line)
+
+    def test_a_font_that_is_not_there_or_is_a_folder_keeps_its_own_sentence(self):
+        # The two ordinary ways a path is not a font are not the refusal above: they keep the sentence that
+        # sends the reader after the Fredoka TTF, which is what a typo deserves.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = checkout(tmp)
+            for name, sentence in ((Path(tmp) / "Fredoka.ttf", "is not in this repo"), (Path(tmp), "cannot open the font at")):
+                with self.subTest(font=str(name)):
+                    done = run(root, name)
+                    self.assertEqual(done.returncode, 2, done.stderr)
+                    self.assertIn("cannot open the font at", done.stderr)
+                    self.assertIn(sentence, done.stderr)
+                    self.assertNotIn("cannot be looked at", done.stderr)
+                    self.assertNotIn("Traceback", done.stderr)
 
 
 if __name__ == "__main__":

@@ -12,15 +12,26 @@ import types
 import unittest
 from unittest import mock
 
-from tests import test_bench_framestats as frames
-from tests import test_bench_home as home
-from tools import bench
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import test_bench_framestats as frames  # noqa: E402
+import test_bench_home as home  # noqa: E402
+from tools import bench  # noqa: E402
 
 PACKAGE = 'com.gathin.tvhome'
 COMPONENT = PACKAGE + '/.MainActivity'
 OTHER = 'com.android.tv.settings/.MainSettings'
 SERVICE = PACKAGE + '/.KeyRemapService'
 START = 'am start -W -a android.intent.action.MAIN -c android.intent.category.HOME -n ' + COMPONENT
+# `dumpsys activity services` with SERVICE bound, as AOSP prints it (see tests/test_theme_restart.py).
+BOUND = f'''  * ServiceRecord{{a1 u0 {SERVICE}}}
+    intent={{cmp={SERVICE}}}
+    app=ProcessRecord{{b2 1234:{PACKAGE}/u0a101}}
+    * IntentBindRecord{{c3 CREATE}}:
+      intent={{cmp={SERVICE}}}
+      binder=android.os.BinderProxy@d4
+      requested=true received=true hasBound=true doRebind=false
+      * Client AppBindRecord{{e5 ProcessRecord{{f6 222:system/1000}}}}
+'''
 
 
 class ReplayState:
@@ -51,6 +62,13 @@ class ReplayState:
             return self.services
         if command.startswith('settings put secure enabled_accessibility_services '):
             self.services = command.split(' ', 4)[4]
+        if command == 'settings get secure accessibility_enabled':
+            return '1'
+        if command == 'am get-current-user':
+            return '0'
+        if command == 'dumpsys activity services ' + PACKAGE:
+            # A TV that binds a helper as soon as it is back on the list: nothing more to repair.
+            return BOUND if SERVICE in self.services else ''
         if 'resolve-activity' in command:
             return COMPONENT
         if command.startswith('dumpsys package '):
@@ -267,6 +285,8 @@ class BenchmarkReplayCLITest(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         script = folder / "bench.py"
         shutil.copyfile(root / "tools" / "bench.py", script)
+        # bench.py reads a helper's binding with theme_restart.py, its sibling in tools/.
+        shutil.copyfile(root / "tools" / "theme_restart.py", folder / "theme_restart.py")
         result = folder / "output" / "result.json"
         previous = b'{"previous_run": true}\n'
         if existing:

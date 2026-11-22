@@ -68,8 +68,16 @@
    it and `tests/test_readme_he_brand_block.py` reads its grid, its two-list line, its single-list names and
    its `<summary>` numbers against README.md's copy - a regeneration moves the Hebrew page with it, while a
    list PR, which touches only its own folder, leaves both pages where they were and stays green.
-6. A `README.md` for TV-specific notes and a `config.json` with the dock are welcome in the folder. Notes are
-   free prose; three things in a README are read back, two of them against the list beside it.
+6. A `README.md` for TV-specific notes and a `config.json` with the dock are welcome in the folder. So is a
+   picture, while a page shows it: a screenshot left beside the list that no page links is one a reader never
+   sees, and `tests/test_example_pictures_linked.py` names every one of them
+   (`examples/<folder>/home.jpg`), so it has to be shown by an image in the folder's own `README.md` or by a
+   `docs/devices/` note that displays it - otherwise screenshots belong in the pull request, not the tree. The
+   suffix has to be true as well: `tests/test_image_files.py` reads the first bytes of every image-named file,
+   so a PNG saved as base64 text is refused by name rather than drawing a broken picture on GitHub (two had
+   landed that way). A theme subfolder's `wallpapers/` is the exception to the first check, because the
+   launcher picks one picture out of that folder and no page names it.
+   Notes are free prose; three things in a README are read back, two of them against the list beside it.
    A whole theme may sit in a theme/ subfolder beside the list instead of a `config.json` at the folder's
    root: six folders do (`motorola-mt4310`, `nokia-streaming-box-8000`, `philips-google-tv-ta7`,
    `tivo-stream-4k`, `xiaomi-mi-box-s`, `xiaomi-mitv-afmu0`), a wallpaper and a wallpapers/ collection
@@ -123,4 +131,6 @@ row should say something new, change the folder's `tv.json`, not the tables.
 
 Then run the tests with the checkout's venv: `tools/venv/bin/python -m unittest discover -s tests -v`.
 [`README.md`'s by-hand block](../../README.md) builds it, and it is where `tools/requirements.txt` puts the
-`adb_shell` and Pillow the suite imports - under the system `python3` those checks skip and the run still says OK.
+`adb_shell` the suite imports - under the system `python3` those checks skip and the run still says OK. The
+picture, card and wallpaper checks need Pillow as well: `tools/requirements-perf.txt` adds it, and without it
+they are reported as skips, not failures.
