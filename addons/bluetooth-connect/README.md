@@ -13,7 +13,7 @@ any other Android TV home it is an ordinary app.
 | **Each paired speaker or headphones** | Shows Connected or Not connected. OK connects or disconnects it; the row says Working... until Android reports the change. A speaker that is switched off stays Not connected. |
 
 Android's public API has neither call, so the add-on uses the audio profile's own connect and disconnect, which a
-normal app may call with the Nearby devices permission. It acts on classic Bluetooth audio (A2DP) only. On the
+normal app may call with the Nearby devices permission (BLUETOOTH_ADMIN up to Android 11). It acts on classic Bluetooth audio (A2DP) only. On the
 Philips it was made on, the speaker stayed disconnected until connected again; a speaker may reconnect by itself
 when it is switched on, as it does without this app. [Headphones](../headphones/) lists the same devices with
 battery and a quiet guard but cannot connect or disconnect them.
@@ -28,6 +28,7 @@ battery and a quiet guard but cannot connect or disconnect them.
 |---|---|
 | Nearby devices (`BLUETOOTH_CONNECT`, Android 12+) | To list paired devices and connect or disconnect them. Granted by `install.sh`; otherwise the app asks once. |
 | Bluetooth (`BLUETOOTH`, Android 11 and older) | The same on older versions, granted at install. |
+| Bluetooth admin (`BLUETOOTH_ADMIN`, Android 11 and older) | Connecting and disconnecting a speaker on Android 9 to 11, granted at install. |
 
 No scanning, no location, no internet permission: nothing leaves the TV. No background service, telemetry, ads,
 accounts or libraries.
