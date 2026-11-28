@@ -29,9 +29,9 @@ public class AlarmReceiver extends BroadcastReceiver {
         }
         long end = Timer.due(context);
         if (end == 0) return;                                   // cancelled, or pushed back since
-        if (System.currentTimeMillis() > end + 5_000) {         // late: a fresh minute of warning, not a sudden sleep
-            if (context.getSystemService(PowerManager.class).isInteractive()) Timer.startSeconds(context, 60);
-            else Timer.cancel(context);
+        if (System.currentTimeMillis() > end + 5_000) {         // late: one fresh minute of warning, then sleep
+            if (!context.getSystemService(PowerManager.class).isInteractive()) Timer.cancel(context);
+            else if (!Timer.retryOnce(context)) Timer.sleepNow(context);
             return;
         }
         if (Timer.ACTION_WARN.equals(intent.getAction())) {

@@ -43,13 +43,21 @@ final class Timer {
 
     static void startSeconds(Context ctx, int seconds) {
         long end = System.currentTimeMillis() + seconds * 1000L;
-        prefs(ctx).edit().putLong("end", end).apply();
+        prefs(ctx).edit().putLong("end", end).putBoolean("retried", false).apply();
         schedule(ctx, ACTION_WARN, Math.max(System.currentTimeMillis(), end - WARN_MS));
         schedule(ctx, ACTION_SLEEP, end + 2_000);
     }
 
+    /** A late alarm gets one fresh minute of warning; false when that minute was already given. */
+    static boolean retryOnce(Context ctx) {
+        if (prefs(ctx).getBoolean("retried", false)) return false;
+        startSeconds(ctx, 60);
+        prefs(ctx).edit().putBoolean("retried", true).apply();
+        return true;
+    }
+
     static void cancel(Context ctx) {
-        prefs(ctx).edit().remove("end").apply();
+        prefs(ctx).edit().remove("end").remove("retried").apply();
         AlarmManager am = ctx.getSystemService(AlarmManager.class);
         am.cancel(pending(ctx, ACTION_WARN));
         am.cancel(pending(ctx, ACTION_SLEEP));
