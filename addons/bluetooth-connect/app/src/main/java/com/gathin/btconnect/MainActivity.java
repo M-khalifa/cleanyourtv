@@ -118,6 +118,7 @@ public class MainActivity extends Activity {
         } catch (IllegalArgumentException notRegistered) {
         }
         main.removeCallbacksAndMessages(null);
+        pending.clear();   // The expiries just dropped would have cleared these; onResume shows the real state.
         super.onPause();
     }
 
