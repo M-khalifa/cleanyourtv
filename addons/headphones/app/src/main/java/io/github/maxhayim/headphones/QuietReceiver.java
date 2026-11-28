@@ -44,8 +44,9 @@ public class QuietReceiver extends BroadcastReceiver {
             if (a == Quiet.Action.NOTHING) return;
             pause(am);
             if (a == Quiet.Action.PAUSE_AND_MUTE) {
+                boolean wasMuted = am.isStreamMute(AudioManager.STREAM_MUSIC);
                 am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_MUTE, 0);
-                p.edit().putBoolean(MUTED_BY_US, true).apply();
+                if (!wasMuted) p.edit().putBoolean(MUTED_BY_US, true).apply();   // the owner's own mute stays theirs
             }
             Log.i(TAG, "headphones dropped: " + a);
         } else if (Quiet.unmuteOnConnect(audio, p.getBoolean(MUTED_BY_US, false))) {
