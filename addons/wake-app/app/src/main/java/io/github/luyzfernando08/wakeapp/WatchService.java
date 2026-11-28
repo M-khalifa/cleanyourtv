@@ -74,7 +74,7 @@ public class WatchService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        goForeground();   // Every startForegroundService must be answered with startForeground, also on a running service.
+        goForeground();   // Answers each startForegroundService, also one that reaches a running service.
         if (intent != null) {
             if (intent.hasExtra("app")) Prefs.setApp(this, intent.getStringExtra("app"));
             if (intent.hasExtra("link")) Prefs.setLink(this, intent.getStringExtra("link"));
