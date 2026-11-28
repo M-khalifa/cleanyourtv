@@ -50,9 +50,15 @@ final class Config {
         return new Config(k, p.getString("url", ""), p.getString("user", ""), p.getString("password", ""));
     }
 
+    /** What is stored for a key: the URL normalized, the user name trimmed, the password exactly as typed. */
+    static String clean(String key, String value) {
+        if ("url".equals(key)) return Blocker.normalizeUrl(value);
+        if (value == null) return "";
+        return "password".equals(key) ? value : value.trim();
+    }
+
     static void save(Context c, String key, String value) {
-        if ("url".equals(key)) value = Blocker.normalizeUrl(value);
-        prefs(c).edit().putString(key, value == null ? "" : value.trim()).apply();
+        prefs(c).edit().putString(key, clean(key, value)).apply();
     }
 
     /** Takes a pushed config.json ({"kind": "pihole"|"adguard", "url", "user", "password"}), and deletes it. */

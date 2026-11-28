@@ -66,11 +66,12 @@ final class Blocker {
     // ---------------------------------------------------------------- Pi-hole v5
 
     static String pihole5Summary(String token) {
-        return "/admin/api.php?summaryRaw&auth=" + urlEncode(token);
+        // a v5 token is hex; spaces are typing slips
+        return "/admin/api.php?summaryRaw&auth=" + urlEncode(token == null ? null : token.trim());
     }
 
     static String pihole5Pause(boolean pause, String token) {
-        return "/admin/api.php?" + (pause ? "disable=" + PAUSE_SECONDS : "enable") + "&auth=" + urlEncode(token);
+        return "/admin/api.php?" + (pause ? "disable=" + PAUSE_SECONDS : "enable") + "&auth=" + urlEncode(token == null ? null : token.trim());
     }
 
     static Stats pihole5(String json) throws JSONException {

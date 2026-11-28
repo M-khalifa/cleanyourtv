@@ -54,6 +54,9 @@ public class BlockerTest {
         assertEquals("/admin/api.php?summaryRaw&auth=a%2Bb", Blocker.pihole5Summary("a+b"));
         assertEquals("/admin/api.php?disable=300&auth=t", Blocker.pihole5Pause(true, "t"));
         assertEquals("/admin/api.php?enable&auth=t", Blocker.pihole5Pause(false, "t"));
+        assertEquals(Blocker.pihole5Summary("abc"), Blocker.pihole5Summary(" abc "));
+        assertEquals(Blocker.pihole5Pause(true, "abc"), Blocker.pihole5Pause(true, " abc "));
+        assertEquals(Blocker.pihole5Pause(false, "abc"), Blocker.pihole5Pause(false, " abc "));
     }
 
     @Test(expected = org.json.JSONException.class)
