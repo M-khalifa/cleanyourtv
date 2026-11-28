@@ -29,7 +29,7 @@ final class Access {
         }
     }
 
-    /** -1 for an unset, empty or odd service.adb.tcp.port value. */
+    /** -1 for an unset, empty or odd port property value. */
     static int port(String prop) {
         if (prop == null) return -1;
         try {
@@ -38,6 +38,11 @@ final class Access {
         } catch (NumberFormatException e) {
             return -1;
         }
+    }
+
+    /** adbd's own order: persist.adb.tcp.port only while service.adb.tcp.port is empty ("adb usb" sets it to 0). */
+    static int tcpPort(String service, String persist) {
+        return service == null || service.trim().isEmpty() ? port(persist) : port(service);
     }
 
     /** Tailscale gives each device an address in 100.64.0.0/10 (the carrier-grade NAT range). */

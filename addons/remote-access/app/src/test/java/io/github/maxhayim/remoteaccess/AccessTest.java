@@ -54,4 +54,14 @@ public class AccessTest {
         assertEquals("Installed, not connected", Access.tailscale(true, null));
         assertEquals("Connected, 100.64.0.1", Access.tailscale(true, "100.64.0.1"));
     }
+
+    @Test
+    public void persistPortWhenServicePortIsUnset() {
+        assertEquals(5555, Access.tcpPort(null, "5555"));
+        assertEquals(5555, Access.tcpPort("", "5555"));
+        assertEquals(5556, Access.tcpPort("5556", "5555"));
+        assertEquals(-1, Access.tcpPort(null, null));
+        assertEquals(-1, Access.tcpPort("0", "x"));
+        assertEquals(-1, Access.tcpPort("0", "5555"));
+    }
 }

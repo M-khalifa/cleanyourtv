@@ -94,7 +94,7 @@ public class MainActivity extends Activity {
     private void refresh() {
         boolean enabled = global("adb_enabled") == 1;
         boolean wireless = global("adb_wifi_enabled") == 1;
-        int port = Access.port(prop("service.adb.tcp.port"));
+        int port = Access.tcpPort(prop("service.adb.tcp.port"), prop("persist.adb.tcp.port"));
         Access.Adb adb = Access.adb(enabled, wireless, port);
         adbRow.setValue(armed ? "OK again: off" : Access.adbValue(adb, wireless, port));
         if (adb == Access.Adb.OFF) {
