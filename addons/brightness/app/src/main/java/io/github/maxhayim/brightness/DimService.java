@@ -26,9 +26,10 @@ import java.util.concurrent.Executors;
 
 /**
  * Holds the dimming layer: one full-screen window over every app that never takes focus or keys, so the remote
- * keeps controlling what is on screen. Runs only while there is a layer to hold or a schedule to follow,
- * and stops itself otherwise. It redraws whenever the settings change and at each start and end of the night.
- * With the TV picture option on, it also sets the TV's own picture for the night and puts the day's back after.
+ * keeps controlling what is on screen. Runs only while there is a layer to hold, a schedule to follow or the
+ * TV's night picture to keep, and stops itself otherwise. It redraws whenever the settings change and at each
+ * start and end of the night. With the TV picture option on, it also sets the TV's own picture for the night
+ * and puts the day's back after.
  */
 public class DimService extends Service {
     private static final String CHANNEL = "dimming";

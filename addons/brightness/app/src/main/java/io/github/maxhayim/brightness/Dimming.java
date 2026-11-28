@@ -206,9 +206,9 @@ final class Dimming {
         return Math.min(toStart, toEnd);
     }
 
-    /** True when the service has work: a layer to hold, or a schedule to follow. */
+    /** True when the service has work: a layer to hold, a schedule to follow, or the TV's night picture to keep. */
     static boolean needsService(Settings s, int minute) {
-        return s.on && (level(s, minute).visible() || minutesToNextChange(s, minute) > 0);
+        return s.on && (level(s, minute).visible() || minutesToNextChange(s, minute) > 0 || tvNightNow(s, minute));
     }
 
     static String clock(int minute, boolean h24) {

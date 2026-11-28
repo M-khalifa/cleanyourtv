@@ -39,6 +39,19 @@ public class DimmingTest {
     }
 
     @Test
+    public void tvNightPictureAloneKeepsTheServiceRunning() {
+        Dimming.Settings s = on();
+        s.night = Dimming.Night.ON;
+        s.nightBrightness = 100;
+        s.warmth = 0;
+        s.tvPicture = true;
+        assertFalse(Dimming.level(s, 600).visible());
+        assertTrue(Dimming.needsService(s, 600));
+        s.tvPicture = false;
+        assertFalse(Dimming.needsService(s, 600));
+    }
+
+    @Test
     public void plainDimmingIsBlackAtTheMissingBrightness() {
         int c = Dimming.color(new Dimming.Level(70, 0, false));
         assertEquals(Math.round(0.3 * 255), alpha(c));
