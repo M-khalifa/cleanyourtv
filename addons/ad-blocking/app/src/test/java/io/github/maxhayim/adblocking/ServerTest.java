@@ -51,6 +51,27 @@ public class ServerTest {
     }
 
     @Test
+    public void pihole6LoginRefusedForAnotherReason() throws Exception {
+        String body = "{\"error\":{\"key\":\"api_seats_exceeded\",\"message\":\"API seats exceeded\",\"hint\":\"increase webserver.api.max_sessions\"},\"took\":0.0001}";
+        try (TinyServer s = new TinyServer(r -> new TinyServer.Answer(429, body))) {
+            Server.Result r = new Server(new Config(Blocker.Kind.PIHOLE, s.url(), "", "pw")).stats();
+            assertNull(r.stats);
+            assertEquals(Blocker.problem(429, Blocker.Kind.PIHOLE), r.problem);
+            assertTrue(r.problem.contains("error 429"));
+        }
+    }
+
+    @Test
+    public void pihole6TwoFactorKeepsTheAppPasswordHint() throws Exception {
+        String body = "{\"error\":{\"key\":\"bad_request\",\"message\":\"No 2FA token found in JSON payload\",\"hint\":null},\"took\":0.0001}";
+        try (TinyServer s = new TinyServer(r -> new TinyServer.Answer(400, body))) {
+            Server.Result r = new Server(new Config(Blocker.Kind.PIHOLE, s.url(), "", "pw")).stats();
+            assertNull(r.stats);
+            assertEquals(Blocker.problem(401, Blocker.Kind.PIHOLE), r.problem);
+        }
+    }
+
+    @Test
     public void pihole5WhenThereIsNoV6Api() throws Exception {
         try (TinyServer s = new TinyServer(r -> r.line.startsWith("GET /admin/api.php?summaryRaw")
                 ? ok(BlockerTest.PH5_SUMMARY) : new TinyServer.Answer(404, "not found"))) {

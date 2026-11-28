@@ -60,7 +60,8 @@ final class Server {
         } catch (JSONException e) {
             return pihole5(pause);
         }
-        if (sid == null) return fail(login.code == 0 ? 0 : 401);
+        // 200 without a valid session, or 400 (two-factor on, no code sent): the password message and its app-password hint
+        if (sid == null) return fail(login.ok() || login.code == 400 ? 401 : login.code);
         String header = sid.isEmpty() ? null : "X-FTL-SID: " + sid;
         try {
             if (pause != null) {
