@@ -55,6 +55,13 @@ public class WatchService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        goForeground();
+        IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+        registerReceiver(screen, filter);
+    }
+
+    private void goForeground() {
         NotificationManager nm = getSystemService(NotificationManager.class);
         nm.createNotificationChannel(new NotificationChannel(CHANNEL, getString(R.string.watching),
                 NotificationManager.IMPORTANCE_MIN));
@@ -63,13 +70,11 @@ public class WatchService extends Service {
                 .setContentTitle(getString(R.string.watching))
                 .build();
         startForeground(1, notification);
-        IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_ON);
-        filter.addAction(Intent.ACTION_SCREEN_OFF);
-        registerReceiver(screen, filter);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        goForeground();   // Every startForegroundService must be answered with startForeground, also on a running service.
         if (intent != null) {
             if (intent.hasExtra("app")) Prefs.setApp(this, intent.getStringExtra("app"));
             if (intent.hasExtra("link")) Prefs.setLink(this, intent.getStringExtra("link"));
