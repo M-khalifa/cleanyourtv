@@ -6,7 +6,8 @@ import android.bluetooth.BluetoothDevice;
 
 /**
  * Connecting and disconnecting a paired speaker. Android's public API has neither, so this calls the audio
- * profile's own connect and disconnect, which a plain app may use with the Nearby devices permission.
+ * profile's own connect and disconnect, which a plain app may use with the Nearby devices permission
+ * (BLUETOOTH_ADMIN up to Android 11).
  */
 final class Link {
     private Link() { }

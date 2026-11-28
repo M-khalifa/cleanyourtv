@@ -4,9 +4,10 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
-    <!-- Listing paired speakers and connecting or disconnecting them. install.sh grants it; otherwise the app asks once. -->
+    <!-- BLUETOOTH_CONNECT (Android 12+) is granted by install.sh or asked once; BLUETOOTH and BLUETOOTH_ADMIN (up to Android 11) are granted at install. -->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
 
     <application
         android:allowBackup="false"
