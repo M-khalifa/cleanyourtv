@@ -136,7 +136,7 @@ public class DimService extends Service {
             // The TV picture first, so a stop waits for the day's picture to be back.
             tvWork.execute(() -> {
                 syncTv(s, tvNight);
-                if (stop) main.post(this::stopSelf);
+                if (stop) main.post(this::stopIfIdle);
             });
         } else if (stop) {
             stopSelf();
@@ -148,6 +148,11 @@ public class DimService extends Service {
             long toBoundary = next * 60_000L - now.get(Calendar.SECOND) * 1000L - now.get(Calendar.MILLISECOND);
             main.postDelayed(tick, Math.max(1000, Math.min(MAX_WAIT_MS, toBoundary)));
         }
+    }
+
+    /** A stop queued behind the TV work: dimming may have been switched back on meanwhile. */
+    private void stopIfIdle() {
+        if (!Dimming.needsService(Prefs.load(this), minuteNow())) stopSelf();
     }
 
     /** Runs on tvWork. Night: remember the day's picture, then set the night one. Day: put the day's back. */
